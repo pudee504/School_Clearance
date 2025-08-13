@@ -2,21 +2,21 @@ package com.mnvths.schoolclearance
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -24,105 +24,128 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.mnvths.schoolclearance.ui.theme.SchoolClearanceTheme
-import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
-import java.io.IOException
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
-// 1. Data Model: A class that exactly matches the JSON response from your server.
+// -----------------------------------------------------------------------------
+// Data Classes to Match the NEW Server Response
+// -----------------------------------------------------------------------------
+
+@Serializable
+data class ClearanceItem(
+    val subjectName: String,
+    val schoolYear: String,
+    val quarter: Int,
+    val isCleared: Boolean
+)
+
+@Serializable
 data class Student(
-    val id: Int,
+    val id: String,
     val name: String,
+    val role: String,
     val yearLevel: Int,
     val section: String,
     val clearanceStatus: List<ClearanceItem>
 )
 
-// A data class for each department/item to be cleared.
-data class ClearanceItem(
-    val department: String,
-    val isCleared: Boolean
+@Serializable
+data class OtherUser(
+    val id: Int,
+    val name: String,
+    val role: String
 )
 
-// 2. ViewModel for Authentication (now the single source of truth)
+sealed class LoggedInUser {
+    data class StudentUser(val student: Student) : LoggedInUser()
+    data class FacultyAdminUser(val user: OtherUser) : LoggedInUser()
+}
+
+// -----------------------------------------------------------------------------
+// AuthViewModel: Handles Login Logic
+// -----------------------------------------------------------------------------
 class AuthViewModel : ViewModel() {
+    private val client = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+            })
+        }
+    }
+
+    private val _loggedInUser = mutableStateOf<LoggedInUser?>(null)
+    val loggedInUser: State<LoggedInUser?> = _loggedInUser
+
     private val _isUserLoggedIn = mutableStateOf(false)
     val isUserLoggedIn: State<Boolean> = _isUserLoggedIn
-    private val _loggedInStudent = mutableStateOf<Student?>(null)
-    val loggedInStudent: State<Student?> = _loggedInStudent
 
-    // OkHttp client for network requests
-    private val client = OkHttpClient()
-    private val JSON = "application/json; charset=utf-8".toMediaType()
-    private val gson = Gson()
+    private val _loginError = mutableStateOf<String?>(null)
+    val loginError: State<String?> = _loginError
 
-    fun signInWithStudentId(
-        studentId: String,
-        password: String,
-        onComplete: (Boolean, Student?) -> Unit
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val jsonObject = JSONObject().apply {
-                put("studentId", studentId.toInt())
-                put("password", password)
-            }
-            val body = jsonObject.toString().toRequestBody(JSON)
-
-            // IMPORTANT: If using an Android emulator, this IP is correct.
-            // For a real device, you need to replace "10.0.2.2" with your computer's local IP address.
-            val request = Request.Builder()
-                .url("http://10.0.2.2:3000/login")
-                .post(body)
-                .build()
-
+    fun login(loginId: String, password: String) {
+        viewModelScope.launch {
             try {
-                val response = client.newCall(request).execute()
+                val response: HttpResponse = client.post("http://10.0.2.2:3000/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody(mapOf("loginId" to loginId, "password" to password))
+                }
 
-                if (response.isSuccessful && response.body != null) {
-                    val responseBody = response.body.string()
-                    // Use Gson to parse the JSON response from the server into our Student data class.
-                    val student = gson.fromJson(responseBody, Student::class.java)
+                if (response.status.isSuccess()) {
+                    val responseText = response.bodyAsText()
+                    val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-                    withContext(Dispatchers.Main) {
+                    // NEW: Parse the response as a generic JSON object first to get the role
+                    val jsonObject = json.decodeFromString<JsonObject>(responseText)
+                    val role = jsonObject["role"]?.jsonPrimitive?.content
+
+                    if (role == "student") {
+                        val student = json.decodeFromString<Student>(responseText)
+                        _loggedInUser.value = LoggedInUser.StudentUser(student)
                         _isUserLoggedIn.value = true
-                        _loggedInStudent.value = student
-                        onComplete(true, student)
+                    } else {
+                        val otherUser = json.decodeFromString<OtherUser>(responseText)
+                        _loggedInUser.value = LoggedInUser.FacultyAdminUser(otherUser)
+                        _isUserLoggedIn.value = true
                     }
-                    Log.d("AuthViewModel", "Custom sign-in successful.")
+                    _loginError.value = null
                 } else {
-                    withContext(Dispatchers.Main) {
-                        onComplete(false, null)
-                        Log.e("AuthViewModel", "Server login failed: ${response.code} - ${response.message}")
-                    }
+                    _loginError.value = "Login failed: Invalid credentials."
+                    _isUserLoggedIn.value = false
                 }
-            } catch (e: IOException) {
-                withContext(Dispatchers.Main) {
-                    onComplete(false, null)
-                    Log.e("AuthViewModel", "Network request failed: ${e.message}")
-                }
+            } catch (e: Exception) {
+                // Log the full exception for debugging
+                Log.e("AuthViewModel", "Login failed: ${e.stackTraceToString()}")
+                _loginError.value = "An error occurred: ${e.message}"
+                _isUserLoggedIn.value = false
             }
         }
     }
 
-    fun signOut() {
+    fun logout() {
+        _loggedInUser.value = null
         _isUserLoggedIn.value = false
-        _loggedInStudent.value = null
     }
 }
 
-// 3. Main Composable function for the entire app.
+// -----------------------------------------------------------------------------
+// Main Application
+// -----------------------------------------------------------------------------
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -132,78 +155,101 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
-                    val authViewModel: AuthViewModel = viewModel()
-
-                    NavHost(
-                        navController = navController,
-                        // This is the key change: always start at a static route.
-                        startDestination = "login"
-                    ) {
-                        composable("login") {
-                            // Use LaunchedEffect to check for login status and redirect immediately.
-                            // This ensures the user doesn't see the login screen if already authenticated.
-                            LaunchedEffect(authViewModel.isUserLoggedIn.value) {
-                                if (authViewModel.isUserLoggedIn.value && authViewModel.loggedInStudent.value != null) {
-                                    val studentId = authViewModel.loggedInStudent.value!!.id
-                                    navController.navigate("studentDetail/$studentId") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                }
-                            }
-
-                            LoginScreen(
-                                authViewModel = authViewModel,
-                                onLoginSuccess = { student ->
-                                    student?.let {
-                                        navController.navigate("studentDetail/${it.id}") {
-                                            popUpTo("login") { inclusive = true }
-                                        }
-                                    }
-                                }
-                            )
-                        }
-
-                        composable(
-                            route = "studentDetail/{studentId}",
-                            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val studentId = backStackEntry.arguments?.getString("studentId")?.toIntOrNull()
-
-                            if (studentId != null && authViewModel.loggedInStudent.value?.id == studentId) {
-                                StudentDetailScreen(
-                                    student = authViewModel.loggedInStudent.value!!,
-                                    onSignOut = {
-                                        authViewModel.signOut()
-                                        navController.navigate("login") {
-                                            // The popUpTo should reference the login screen
-                                            popUpTo("login") { inclusive = true }
-                                        }
-                                    }
-                                )
-                            } else {
-                                LaunchedEffect(Unit) {
-                                    navController.navigate("login") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                }
-                                Text("Redirecting to login...")
-                            }
-                        }
-                    }
+                    AppNavigation()
                 }
             }
         }
     }
 }
 
-// 4. Login Screen Composable
+@Composable
+fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
+    val navController = rememberNavController()
+
+    LaunchedEffect(authViewModel.loggedInUser.value) {
+        authViewModel.loggedInUser.value?.let { user ->
+            when (user) {
+                is LoggedInUser.StudentUser -> navController.navigate("studentDetail") {
+                    popUpTo("login") { inclusive = true }
+                }
+                is LoggedInUser.FacultyAdminUser -> {
+                    when (user.user.role) {
+                        "faculty" -> navController.navigate("facultyDashboard") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                        "admin" -> navController.navigate("adminDashboard") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                        else -> {
+                            // Fallback to login if role is unexpected
+                            navController.navigate("login")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = "login"
+    ) {
+        composable("login") {
+            LoginScreen(
+                authViewModel = authViewModel,
+                onLogin = { loginId, password ->
+                    authViewModel.login(loginId, password)
+                }
+            )
+        }
+
+        composable("studentDetail") {
+            val student = (authViewModel.loggedInUser.value as? LoggedInUser.StudentUser)?.student
+            if (student != null) {
+                StudentDetailScreen(student = student, onSignOut = {
+                    authViewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                })
+            }
+        }
+
+        composable("facultyDashboard") {
+            val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
+            if (user != null) {
+                FacultyDashboard(user = user, onSignOut = {
+                    authViewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                })
+            }
+        }
+
+        composable("adminDashboard") {
+            val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
+            if (user != null) {
+                AdminDashboard(user = user, onSignOut = {
+                    authViewModel.logout()
+                    navController.navigate("login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                })
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Composable Screens
+// -----------------------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: (Student?) -> Unit) {
-    var studentId by remember { mutableStateOf("") }
+fun LoginScreen(authViewModel: AuthViewModel, onLogin: (String, String) -> Unit) {
+    var loginId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val context = LocalContext.current
+    val loginError by authViewModel.loginError
 
     Column(
         modifier = Modifier
@@ -212,112 +258,158 @@ fun LoginScreen(authViewModel: AuthViewModel, onLoginSuccess: (Student?) -> Unit
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "School Clearance Login",
-            style = MaterialTheme.typography.headlineLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 24.dp)
+        Image(painter = painterResource(id = R.drawable.malasila),
+            contentDescription = "MNVTHS Logo",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "MNVTHS Exam Clearance", style = MaterialTheme.typography.titleLarge)
+
         OutlinedTextField(
-            value = studentId,
-            onValueChange = { studentId = it },
-            label = { Text("Student ID") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            value = loginId,
+            onValueChange = { loginId = it },
+            label = { Text("Student ID / Username") },
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
-            onClick = {
-                authViewModel.signInWithStudentId(studentId, password) { success, student ->
-                    if (success) {
-                        Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                        onLoginSuccess(student)
-                    } else {
-                        Toast.makeText(context, "Login Failed. Please check your credentials.", Toast.LENGTH_LONG).show()
-                    }
-                }
-            },
+            onClick = { onLogin(loginId, password) },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Login")
         }
+        loginError?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
     }
 }
 
-// 5. Composable for the student detail screen.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Clearance Details") },
+                title = { Text("Student Clearance Status") },
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        Text("Logout")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Sign Out")
                     }
                 }
             )
         }
     ) { paddingValues ->
+        // Use remember to get the school year and quarter from the first item
+        val schoolYear = student.clearanceStatus.firstOrNull()?.schoolYear ?: "N/A"
+        val quarter = student.clearanceStatus.firstOrNull()?.quarter ?: "N/A"
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Text(text = student.name, style = MaterialTheme.typography.headlineLarge)
+            Text(text = "Name: ${student.name}", style = MaterialTheme.typography.headlineLarge)
             Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Student ID: ${student.id}", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Year Level: ${student.yearLevel}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Section: ${student.section}", style = MaterialTheme.typography.bodyLarge)
+
+            // NEW: Display school year and quarter here
+            Text(text = "School Year: $schoolYear", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Quarter: $quarter", style = MaterialTheme.typography.bodyLarge)
+
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = "Clearance Status:", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Display clearance status using a LazyColumn for efficiency
-            LazyColumn {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(student.clearanceStatus) { item ->
-                    ClearanceStatusItem(item)
+                    // NEW: Pass only the subject name and status
+                    ClearanceStatusItem(
+                        subjectName = item.subjectName,
+                        isCleared = item.isCleared
+                    )
                 }
             }
         }
     }
 }
 
-// 6. Composable for a single clearance item's status.
 @Composable
-fun ClearanceStatusItem(item: ClearanceItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(text = item.department, style = MaterialTheme.typography.bodyMedium)
-        Text(
-            text = if (item.isCleared) "Cleared" else "Not Cleared",
-            color = if (item.isCleared) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
+fun ClearanceStatusItem(subjectName: String, isCleared: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isCleared) Color.Green.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f)
         )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = subjectName, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = if (isCleared) "Cleared" else "Not Cleared",
+                color = if (isCleared) Color.Green else Color.Red,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
 }
 
-// 7. Preview for the login screen.
-@Preview(showBackground = true)
+
+// Placeholder for Faculty Dashboard
 @Composable
-fun LoginScreenPreview() {
-    SchoolClearanceTheme {
-        LoginScreen(
-            authViewModel = viewModel(),
-            onLoginSuccess = {}
-        )
+fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Welcome, Faculty: ${user.name}", style = MaterialTheme.typography.headlineLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("You are logged in with a Faculty account.", style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onSignOut) {
+            Text("Sign Out")
+        }
+    }
+}
+
+// Placeholder for Admin Dashboard
+@Composable
+fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Welcome, Admin: ${user.name}", style = MaterialTheme.typography.headlineLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("You are logged in with an Admin account.", style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onSignOut) {
+            Text("Sign Out")
+        }
     }
 }
