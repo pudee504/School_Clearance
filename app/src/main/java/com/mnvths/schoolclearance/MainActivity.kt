@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,6 +43,7 @@ import kotlinx.serialization.json.jsonPrimitive
 // Data Classes to Match the NEW Server Response
 // -----------------------------------------------------------------------------
 
+// Data class for student clearance status
 @Serializable
 data class ClearanceItem(
     val subjectName: String,
@@ -53,6 +52,7 @@ data class ClearanceItem(
     val isCleared: Boolean
 )
 
+// Data class for a student user's full profile
 @Serializable
 data class Student(
     val id: String,
@@ -63,6 +63,7 @@ data class Student(
     val clearanceStatus: List<ClearanceItem>
 )
 
+// Data class for a faculty or admin user's basic info
 @Serializable
 data class OtherUser(
     val id: Int,
@@ -70,6 +71,7 @@ data class OtherUser(
     val role: String
 )
 
+// Sealed class to represent the two possible user types
 sealed class LoggedInUser {
     data class StudentUser(val student: Student) : LoggedInUser()
     data class FacultyAdminUser(val user: OtherUser) : LoggedInUser()
@@ -109,7 +111,6 @@ class AuthViewModel : ViewModel() {
                     val responseText = response.bodyAsText()
                     val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-                    // NEW: Parse the response as a generic JSON object first to get the role
                     val jsonObject = json.decodeFromString<JsonObject>(responseText)
                     val role = jsonObject["role"]?.jsonPrimitive?.content
 
@@ -128,7 +129,6 @@ class AuthViewModel : ViewModel() {
                     _isUserLoggedIn.value = false
                 }
             } catch (e: Exception) {
-                // Log the full exception for debugging
                 Log.e("AuthViewModel", "Login failed: ${e.stackTraceToString()}")
                 _loginError.value = "An error occurred: ${e.message}"
                 _isUserLoggedIn.value = false
@@ -166,6 +166,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
     val navController = rememberNavController()
 
+    // This effect listens for changes in the loggedInUser state and navigates accordingly.
     LaunchedEffect(authViewModel.loggedInUser.value) {
         authViewModel.loggedInUser.value?.let { user ->
             when (user) {
@@ -181,7 +182,6 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
                             popUpTo("login") { inclusive = true }
                         }
                         else -> {
-                            // Fallback to login if role is unexpected
                             navController.navigate("login")
                         }
                     }
@@ -255,18 +255,8 @@ fun LoginScreen(authViewModel: AuthViewModel, onLogin: (String, String) -> Unit)
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        verticalArrangement = Arrangement.Center
     ) {
-        Image(painter = painterResource(id = R.drawable.malasila),
-            contentDescription = "MNVTHS Logo",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "MNVTHS Exam Clearance", style = MaterialTheme.typography.titleLarge)
-
         OutlinedTextField(
             value = loginId,
             onValueChange = { loginId = it },
@@ -312,9 +302,8 @@ fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
             )
         }
     ) { paddingValues ->
-        // Use remember to get the school year and quarter from the first item
         val schoolYear = student.clearanceStatus.firstOrNull()?.schoolYear ?: "N/A"
-        val quarter = student.clearanceStatus.firstOrNull()?.quarter ?: "N/A"
+        val quarter = student.clearanceStatus.firstOrNull()?.quarter?.toString() ?: "N/A"
 
         Column(
             modifier = Modifier
@@ -328,7 +317,6 @@ fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
             Text(text = "Year Level: ${student.yearLevel}", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Section: ${student.section}", style = MaterialTheme.typography.bodyLarge)
 
-            // NEW: Display school year and quarter here
             Text(text = "School Year: $schoolYear", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Quarter: $quarter", style = MaterialTheme.typography.bodyLarge)
 
@@ -341,7 +329,6 @@ fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(student.clearanceStatus) { item ->
-                    // NEW: Pass only the subject name and status
                     ClearanceStatusItem(
                         subjectName = item.subjectName,
                         isCleared = item.isCleared
@@ -377,8 +364,6 @@ fun ClearanceStatusItem(subjectName: String, isCleared: Boolean) {
     }
 }
 
-
-// Placeholder for Faculty Dashboard
 @Composable
 fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit) {
     Column(
@@ -396,20 +381,85 @@ fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit) {
     }
 }
 
-// Placeholder for Admin Dashboard
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit) {
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Faculty", "Students", "Subjects")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Admin Dashboard") },
+                actions = {
+                    IconButton(onClick = onSignOut) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Sign Out")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title) }
+                    )
+                }
+            }
+            when (selectedTabIndex) {
+                0 -> FacultyListScreen()
+                1 -> StudentListScreen()
+                2 -> SubjectListScreen()
+            }
+        }
+    }
+}
+
+// Placeholder for the Faculty tab content
+@Composable
+fun FacultyListScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Text("Welcome, Admin: ${user.name}", style = MaterialTheme.typography.headlineLarge)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("You are logged in with an Admin account.", style = MaterialTheme.typography.bodyLarge)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onSignOut) {
-            Text("Sign Out")
-        }
+        Text("Faculty Management Screen (coming soon!)", style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+// Placeholder for the Students tab content
+@Composable
+fun StudentListScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Student Management Screen (coming soon!)", style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+// Placeholder for the Subjects tab content
+@Composable
+fun SubjectListScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Subject Management Screen (coming soon!)", style = MaterialTheme.typography.titleLarge)
     }
 }
