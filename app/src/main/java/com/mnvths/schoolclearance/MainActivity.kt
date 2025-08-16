@@ -214,6 +214,10 @@ class FacultyViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
+    // Add this new state variable
+    private val _assignedSections = mutableStateOf<Map<Int, List<ClassSection>>>(emptyMap())
+    val assignedSections: State<Map<Int, List<ClassSection>>> = _assignedSections
+
     fun fetchFacultyList() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -255,6 +259,28 @@ class FacultyViewModel : ViewModel() {
         }
     }
 
+    // Add this new function to fetch the sections
+    // In FacultyViewModel
+// Corrected fetchAssignedSections to properly add to the map
+    fun fetchAssignedSections(facultyId: Int, subjectId: Int) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-subject-sections/$facultyId/$subjectId")
+                if (response.status.isSuccess()) {
+                    val sections: List<ClassSection> = response.body()
+                    // Use a proper map update
+                    _assignedSections.value = _assignedSections.value + (subjectId to sections)
+                } else {
+                    // Handle error case
+                }
+            } catch (e: Exception) {
+                // Handle network error
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
     // NEW function to edit a faculty member
     fun editFaculty(id: Int, firstName: String, lastName: String, middleName: String?, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
@@ -370,6 +396,7 @@ class AssignmentViewModel : ViewModel() {
     }
 
     // In AssignmentViewModel
+    // In AssignmentViewModel
     fun fetchAssignedSections(
         facultyId: Int,
         subjectId: Int,
@@ -377,10 +404,8 @@ class AssignmentViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/assigned-sections") {
-                    parameter("facultyId", facultyId)
-                    parameter("subjectId", subjectId)
-                }
+                // Corrected URL to match the server endpoint
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-subject-sections/$facultyId/$subjectId")
                 if (response.status.isSuccess()) {
                     val assigned: List<ClassSection> = response.body()
                     onResult(assigned)

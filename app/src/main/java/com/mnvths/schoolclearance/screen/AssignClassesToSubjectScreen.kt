@@ -1,5 +1,6 @@
 package com.mnvths.schoolclearance.screen
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,21 +60,28 @@ fun AssignClassesToSubjectScreen(
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
-    // This state holds the sections selected by the user
-    val selectedSections = remember { mutableStateListOf<Int>() }
-
-    // This state holds sections already assigned in the database
+    // Sections already assigned in the database
     var assignedSections by remember { mutableStateOf<List<ClassSection>>(emptyList()) }
     var isFetchingAssigned by remember { mutableStateOf(true) }
 
+    // Sections selected by the user (only new selections)
+    val selectedSectionIds = remember { mutableStateListOf<Int>() }
+
+
+    // Fetch data once on load
     LaunchedEffect(Unit) {
         viewModel.fetchAllClassSections()
         viewModel.fetchAssignedSections(facultyId, subjectId) { existing ->
             assignedSections = existing
-            selectedSections.clear()
-            selectedSections.addAll(existing.map { it.sectionId })
             isFetchingAssigned = false
+            Log.d("AssignClasses", "Initial Assigned Sections: $existing")
         }
+    }
+
+    // Debug state changes
+    LaunchedEffect(assignedSections, sections) {
+        Log.d("AssignClasses", "Assigned Sections: $assignedSections")
+        Log.d("AssignClasses", "All Sections: $sections")
     }
 
     Scaffold(
@@ -102,15 +110,20 @@ fun AssignClassesToSubjectScreen(
                 )
 
                 else -> {
+                    // Only show sections not yet assigned
+                    val unassignedSections = sections.filter { section ->
+                        assignedSections.none { it.sectionId == section.sectionId }
+                    }
+                    Log.d("AssignClasses", "Unassigned Sections: $unassignedSections")
+
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(sections) { section: ClassSection ->
-                            val isChecked = selectedSections.contains(section.sectionId)
-
+                        items(unassignedSections) { section ->
+                            val isChecked = selectedSectionIds.contains(section.sectionId)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -118,21 +131,21 @@ fun AssignClassesToSubjectScreen(
                                     .toggleable(
                                         value = isChecked,
                                         onValueChange = { selected ->
-                                            if (selected) {
-                                                selectedSections.add(section.sectionId)
-                                            } else {
-                                                selectedSections.remove(section.sectionId)
-                                            }
+                                            if (selected) selectedSectionIds.add(section.sectionId)
+                                            else selectedSectionIds.remove(section.sectionId)
                                         },
                                         role = Role.Checkbox
                                     ),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(text = "${section.gradeLevel} - ${section.sectionName}", modifier = Modifier.weight(1f))
+                                Text(
+                                    text = "${section.gradeLevel} - ${section.sectionName}",
+                                    modifier = Modifier.weight(1f)
+                                )
                                 Checkbox(
                                     checked = isChecked,
-                                    onCheckedChange = null // null because the Row's toggleable handles the click
+                                    onCheckedChange = null
                                 )
                             }
                         }
@@ -142,18 +155,36 @@ fun AssignClassesToSubjectScreen(
 
                     Button(
                         onClick = {
+                            if (selectedSectionIds.isEmpty()) {
+                                Toast.makeText(context, "No new sections selected", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
+
+                            // In AssignClassesToSubjectScreen.kt, inside the Button's onClick lambda
+
                             viewModel.assignClassesToFaculty(
                                 facultyId = facultyId,
                                 subjectId = subjectId,
-                                sectionIds = selectedSections.toList(),
+                                sectionIds = selectedSectionIds.toList(),
                                 onSuccess = {
                                     Toast.makeText(context, "Classes assigned successfully!", Toast.LENGTH_SHORT).show()
-                                    navController.popBackStack()
+                                    // Refetch assigned sections to ensure UI is in sync with server
+                                    viewModel.fetchAssignedSections(facultyId, subjectId) { updatedSections ->
+                                        // Update the assignedSections state here
+                                        assignedSections = updatedSections
+                                        // Clear the selected sections list
+                                        selectedSectionIds.clear()
+                                        Log.d("AssignClasses", "Updated Assigned Sections: $updatedSections")
+                                        Log.d("AssignClasses", "Selected Section IDs Cleared: $selectedSectionIds")
+                                        // Finally, navigate back
+                                        navController.popBackStack()
+                                    }
                                 },
                                 onError = { errorMessage ->
                                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                 }
                             )
+
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -161,10 +192,10 @@ fun AssignClassesToSubjectScreen(
                     ) {
                         Text("Save Assignments")
                     }
+
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
 }
-

@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.ui)
+    implementation(libs.androidx.animation)
 
     // Removed OkHttp and Gson, added Ktor and Kotlinx Serialization
     val ktorVersion = "3.2.3" // Use the latest stable version
