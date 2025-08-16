@@ -50,7 +50,6 @@ import com.mnvths.schoolclearance.ClassSection
 fun AssignClassesToSubjectScreen(
     navController: NavController,
     facultyId: Int,
-    facultyName: String,
     subjectId: Int,
     subjectName: String,
     viewModel: AssignmentViewModel = viewModel()
@@ -60,17 +59,27 @@ fun AssignClassesToSubjectScreen(
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
-    // Track checkbox state
-    val selectedSections = remember { mutableStateMapOf<String, Boolean>() }
+    // This state holds the sections selected by the user
+    val selectedSections = remember { mutableStateListOf<Int>() }
+
+    // This state holds sections already assigned in the database
+    var assignedSections by remember { mutableStateOf<List<ClassSection>>(emptyList()) }
+    var isFetchingAssigned by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.fetchAllClassSections()
+        viewModel.fetchAssignedSections(facultyId, subjectId) { existing ->
+            assignedSections = existing
+            selectedSections.clear()
+            selectedSections.addAll(existing.map { it.sectionId })
+            isFetchingAssigned = false
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Assign Classes to $subjectName") },
+                title = { Text("Assign $subjectName") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -79,61 +88,83 @@ fun AssignClassesToSubjectScreen(
             )
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
+        Column(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             when {
-                isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                isLoading || isFetchingAssigned -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+
                 error != null -> Text(
                     text = "Error: $error",
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(16.dp)
                 )
-                else -> LazyColumn(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(sections) { sectionData ->
-                        val key = "${sectionData.gradeLevel}-${sectionData.sectionName}"
-                        val checked = selectedSections[key] ?: false
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = checked,
-                                onCheckedChange = { isChecked ->
-                                    selectedSections[key] = isChecked
-                                    if (isChecked) {
-                                        // Assign class to faculty for subject
-                                        viewModel.assignClassToFaculty(
-                                            facultyId = facultyId,
-                                            subjectId = subjectId,
-                                            sectionId = sectionData.sectionId,
-                                            onSuccess = {
-                                                Toast.makeText(context, "Assigned Grade ${sectionData.gradeLevel}-${sectionData.sectionName}", Toast.LENGTH_SHORT).show()
-                                            },
-                                            onError = { errMsg ->
-                                                Toast.makeText(context, errMsg, Toast.LENGTH_LONG).show()
-                                                selectedSections[key] = false
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(sections) { section: ClassSection ->
+                            val isChecked = selectedSections.contains(section.sectionId)
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                                    .toggleable(
+                                        value = isChecked,
+                                        onValueChange = { selected ->
+                                            if (selected) {
+                                                selectedSections.add(section.sectionId)
+                                            } else {
+                                                selectedSections.remove(section.sectionId)
                                             }
-                                        )
-
-
-                                    }
-                                }
-                            )
-                            Text(
-                                text = "Grade ${sectionData.gradeLevel} - Section ${sectionData.sectionName}", // ✅ renamed
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                                        },
+                                        role = Role.Checkbox
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "${section.gradeLevel} - ${section.sectionName}", modifier = Modifier.weight(1f))
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = null // null because the Row's toggleable handles the click
+                                )
+                            }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.assignClassesToFaculty(
+                                facultyId = facultyId,
+                                subjectId = subjectId,
+                                sectionIds = selectedSections.toList(),
+                                onSuccess = {
+                                    Toast.makeText(context, "Classes assigned successfully!", Toast.LENGTH_SHORT).show()
+                                    navController.popBackStack()
+                                },
+                                onError = { errorMessage ->
+                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        Text("Save Assignments")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
 }
+

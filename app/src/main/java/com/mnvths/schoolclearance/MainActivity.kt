@@ -122,6 +122,12 @@ data class ClassSection(
     val sectionName: String
 )
 
+@Serializable
+data class AssignClassesRequest(
+    val facultyId: Int,
+    val subjectId: Int,
+    val sectionIds: List<Int>
+)
 
 
 // -----------------------------------------------------------------------------
@@ -332,6 +338,7 @@ class AssignmentViewModel : ViewModel() {
     }
 
     // NEW function to assign a subject to a faculty member
+    // NEW function to confirm a subject selection for a faculty member
     fun assignSubjectToFaculty(
         facultyId: Int,
         subjectId: Int,
@@ -350,15 +357,70 @@ class AssignmentViewModel : ViewModel() {
                     )
                 }
                 if (response.status.isSuccess()) {
+                    // ✅ Just confirm selection
                     onSuccess()
                 } else {
-                    onError("Failed to assign subject: ${response.status.description}")
+                    val errorBody = response.bodyAsText()
+                    onError("Failed to select subject: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
             }
         }
     }
+
+    // In AssignmentViewModel
+    fun fetchAssignedSections(
+        facultyId: Int,
+        subjectId: Int,
+        onResult: (List<ClassSection>) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/assigned-sections") {
+                    parameter("facultyId", facultyId)
+                    parameter("subjectId", subjectId)
+                }
+                if (response.status.isSuccess()) {
+                    val assigned: List<ClassSection> = response.body()
+                    onResult(assigned)
+                } else {
+                    onResult(emptyList())
+                }
+            } catch (e: Exception) {
+                onResult(emptyList())
+            }
+        }
+    }
+
+    fun assignClassesToFaculty(
+        facultyId: Int,
+        subjectId: Int,
+        sectionIds: List<Int>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.post("http://10.0.2.2:3000/assign-classes") {
+                    contentType(ContentType.Application.Json)
+                    setBody(AssignClassesRequest(facultyId, subjectId, sectionIds))
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                } else {
+                    val errorBody = response.bodyAsText()
+                    onError("Failed to assign classes: ${response.status.description}. Details: $errorBody")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+
+
+
 
 
     // NEW function to assign a class to a faculty member for a specific subject

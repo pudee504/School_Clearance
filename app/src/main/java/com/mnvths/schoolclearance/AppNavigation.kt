@@ -173,7 +173,6 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             AssignClassesToSubjectScreen(
                 navController = navController,
                 facultyId = facultyId,
-                facultyName = facultyName,
                 subjectId = subjectId,
                 subjectName = subjectName
             )
