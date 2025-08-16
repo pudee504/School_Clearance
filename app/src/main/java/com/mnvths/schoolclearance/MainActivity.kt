@@ -50,6 +50,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -72,7 +73,7 @@ data class Student(
     val id: String,
     val name: String,
     val role: String,
-    val yearLevel: Int,
+    val gradeLevel: String,
     val section: String,
     val clearanceStatus: List<ClearanceItem>
 )
@@ -116,9 +117,11 @@ data class AssignedSubject(
 // NEW data class for a class section
 @Serializable
 data class ClassSection(
-    val yearLevel: Int,
-    val section: String
+    val sectionId: Int,
+    val gradeLevel: String,
+    val sectionName: String
 )
+
 
 
 // -----------------------------------------------------------------------------
@@ -332,8 +335,6 @@ class AssignmentViewModel : ViewModel() {
     fun assignSubjectToFaculty(
         facultyId: Int,
         subjectId: Int,
-        yearLevel: Int,
-        section: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -344,17 +345,14 @@ class AssignmentViewModel : ViewModel() {
                     setBody(
                         mapOf(
                             "facultyId" to facultyId,
-                            "subjectId" to subjectId,
-                            "yearLevel" to yearLevel,
-                            "section" to section
+                            "subjectId" to subjectId
                         )
                     )
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
                 } else {
-                    val errorBody = response.bodyAsText()
-                    onError("Failed to assign subject: ${response.status.description}. Details: $errorBody")
+                    onError("Failed to assign subject: ${response.status.description}")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
@@ -364,12 +362,24 @@ class AssignmentViewModel : ViewModel() {
 
 
     // NEW function to assign a class to a faculty member for a specific subject
-    fun assignClassToFaculty(facultyId: Int, subjectId: Int, yearLevel: Int, section: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun assignClassToFaculty(
+        facultyId: Int,
+        subjectId: Int,
+        sectionId: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val response: HttpResponse = client.post("http://10.0.2.2:3000/assign-class") {
                     contentType(ContentType.Application.Json)
-                    setBody(mapOf("facultyId" to facultyId, "subjectId" to subjectId, "yearLevel" to yearLevel, "section" to section))
+                    setBody(
+                        mapOf(
+                            "facultyId" to facultyId,
+                            "subjectId" to subjectId,
+                            "sectionId" to sectionId
+                        )
+                    )
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
@@ -383,6 +393,7 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 }
+
 
 // -----------------------------------------------------------------------------
 // Main Application and Navigation
@@ -403,7 +414,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 // -----------------------------------------------------------------------------
 // Composable Screens
 // -----------------------------------------------------------------------------

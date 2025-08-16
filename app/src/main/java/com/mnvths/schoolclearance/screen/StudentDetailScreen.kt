@@ -50,7 +50,7 @@ fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
             Text(text = "Name: ${student.name}", style = MaterialTheme.typography.headlineLarge)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Student ID: ${student.id}", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Year Level: ${student.yearLevel}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Year Level: ${student.gradeLevel}", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Section: ${student.section}", style = MaterialTheme.typography.bodyLarge)
 
             Text(text = "School Year: $schoolYear", style = MaterialTheme.typography.bodyLarge)
