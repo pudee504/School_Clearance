@@ -1,35 +1,29 @@
+// AdminDashboard.kt
 package com.mnvths.schoolclearance.screen
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.screen.FacultyListScreen
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.mnvths.schoolclearance.OtherUser
-import com.mnvths.schoolclearance.screen.StudentListScreen
-import com.mnvths.schoolclearance.screen.SignatoryListScreen
+import com.mnvths.schoolclearance.AdminNavGraph // IMPORT THE NEW FILE
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavController) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Faculty", "Students", "Subjects")
+    // This is the NavController for the NESTED navigation graph.
+    val adminNavController = rememberNavController()
+
+    val navBackStackEntry by adminNavController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
         topBar = {
@@ -48,20 +42,32 @@ fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavCon
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            TabRow(selectedTabIndex = selectedTabIndex) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(title) }
-                    )
+            TabRow(
+                selectedTabIndex = when (currentRoute) {
+                    "facultyList" -> 0
+                    "studentManagement" -> 1
+                    "subjects" -> 2
+                    else -> 0
                 }
+            ) {
+                Tab(
+                    selected = currentRoute == "facultyList",
+                    onClick = { adminNavController.navigate("facultyList") },
+                    text = { Text("Faculty") }
+                )
+                Tab(
+                    selected = currentRoute == "studentManagement",
+                    onClick = { adminNavController.navigate("studentManagement") },
+                    text = { Text("Students") }
+                )
+                Tab(
+                    selected = currentRoute == "subjects",
+                    onClick = { adminNavController.navigate("subjects") },
+                    text = { Text("Subjects") }
+                )
             }
-            when (selectedTabIndex) {
-                0 -> FacultyListScreen(navController = navController)
-                1 -> StudentManagementScreen(navController = navController)
-                2 -> SignatoryListScreen()
-            }
+            // The nested NavHost
+            AdminNavGraph(navController = adminNavController)
         }
     }
 }

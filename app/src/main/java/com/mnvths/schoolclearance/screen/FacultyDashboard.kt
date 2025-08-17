@@ -11,10 +11,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.mnvths.schoolclearance.OtherUser
 
 @Composable
-fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit) {
+fun FacultyDashboard(user: OtherUser, navController: NavController, onSignOut: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
