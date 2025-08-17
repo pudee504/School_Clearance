@@ -9,8 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mnvths.schoolclearance.screen.AdminDashboard
-import com.mnvths.schoolclearance.screen.AssignClassesToSubjectScreen
-import com.mnvths.schoolclearance.screen.AssignSubjectToFacultyScreen
+import com.mnvths.schoolclearance.screen.AssignClassesToSignatoryScreen
+import com.mnvths.schoolclearance.screen.AssignSignatoryToFacultyScreen
 import com.mnvths.schoolclearance.screen.EditFacultyScreen
 import com.mnvths.schoolclearance.screen.FacultyDashboard
 import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
@@ -147,7 +147,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             )
         }
         composable(
-            route = "assignSubjectToFaculty/{facultyId}/{facultyName}",
+            route = "assignSignatoryToFaculty/{facultyId}/{facultyName}",
             arguments = listOf(
                 navArgument("facultyId") { type = NavType.IntType },
                 navArgument("facultyName") { type = NavType.StringType }
@@ -155,26 +155,26 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("facultyId") ?: return@composable
             val name = backStackEntry.arguments?.getString("facultyName") ?: ""
-            AssignSubjectToFacultyScreen(navController = navController, facultyId = id, facultyName = name)
+            AssignSignatoryToFacultyScreen(navController = navController, facultyId = id, facultyName = name)
         }
         composable(
-            route = "assignClassesToSubject/{facultyId}/{facultyName}/{subjectId}/{subjectName}",
+            route = "assignClassesToSignatory/{facultyId}/{facultyName}/{signatoryId}/{signatoryName}",
             arguments = listOf(
                 navArgument("facultyId") { type = NavType.IntType },
                 navArgument("facultyName") { type = NavType.StringType },
-                navArgument("subjectId") { type = NavType.IntType },
-                navArgument("subjectName") { type = NavType.StringType }
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val facultyId = backStackEntry.arguments?.getInt("facultyId") ?: return@composable
             val facultyName = backStackEntry.arguments?.getString("facultyName") ?: ""
-            val subjectId = backStackEntry.arguments?.getInt("subjectId") ?: return@composable
-            val subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
-            AssignClassesToSubjectScreen(
+            val signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: return@composable
+            val signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+            AssignClassesToSignatoryScreen(
                 navController = navController,
                 facultyId = facultyId,
-                subjectId = subjectId,
-                subjectName = subjectName
+                signatoryId = signatoryId,
+                signatoryName = signatoryName
             )
         }
     }

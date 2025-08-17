@@ -66,7 +66,7 @@ fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
             ) {
                 items(student.clearanceStatus) { item ->
                     ClearanceStatusItem(
-                        subjectName = item.subjectName,
+                        signatoryName = item.signatoryName,
                         isCleared = item.isCleared
                     )
                 }

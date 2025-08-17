@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ClearanceStatusItem(subjectName: String, isCleared: Boolean) {
+fun ClearanceStatusItem(signatoryName: String, isCleared: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -29,7 +29,7 @@ fun ClearanceStatusItem(subjectName: String, isCleared: Boolean) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = subjectName, style = MaterialTheme.typography.titleMedium)
+            Text(text = signatoryName, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = if (isCleared) "Cleared" else "Not Cleared",
                 color = if (isCleared) Color.Green else Color.Red,

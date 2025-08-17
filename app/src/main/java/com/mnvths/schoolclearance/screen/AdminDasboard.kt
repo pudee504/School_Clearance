@@ -23,7 +23,7 @@ import androidx.navigation.NavController
 import com.mnvths.schoolclearance.screen.FacultyListScreen
 import com.mnvths.schoolclearance.OtherUser
 import com.mnvths.schoolclearance.screen.StudentListScreen
-import com.mnvths.schoolclearance.screen.SubjectListScreen
+import com.mnvths.schoolclearance.screen.SignatoryListScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +60,7 @@ fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavCon
             when (selectedTabIndex) {
                 0 -> FacultyListScreen(navController = navController)
                 1 -> StudentListScreen()
-                2 -> SubjectListScreen()
+                2 -> SignatoryListScreen()
             }
         }
     }

@@ -43,25 +43,25 @@ import com.mnvths.schoolclearance.AssignmentViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssignSubjectToFacultyScreen(
+fun AssignSignatoryToFacultyScreen(
     navController: NavController,
     facultyId: Int,
     facultyName: String,
     viewModel: AssignmentViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val subjects by viewModel.subjects
+    val signatories by viewModel.signatories
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
     LaunchedEffect(Unit) {
-        viewModel.fetchSubjects()
+        viewModel.fetchSignatories()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Assign Subject to $facultyName") },
+                title = { Text("Assign Signatory to $facultyName") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -84,7 +84,7 @@ fun AssignSubjectToFacultyScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(subjects) { subject ->
+                    items(signatories) { signatory ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier
@@ -93,14 +93,14 @@ fun AssignSubjectToFacultyScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = subject.subjectName, style = MaterialTheme.typography.titleLarge)
+                                Text(text = signatory.signatoryName, style = MaterialTheme.typography.titleLarge)
                                 Button(onClick = {
-                                    viewModel.assignSubjectToFaculty(
+                                    viewModel.assignSignatoryToFaculty(
                                         facultyId = facultyId,
-                                        subjectId = subject.id,
+                                        signatoryId = signatory.id,
                                         onSuccess = {
-                                            Toast.makeText(context, "${subject.subjectName} assigned to $facultyName!", Toast.LENGTH_SHORT).show()
-                                            navController.popBackStack() // Go back to assigned subjects list
+                                            Toast.makeText(context, "${signatory.signatoryName} assigned to $facultyName!", Toast.LENGTH_SHORT).show()
+                                            navController.popBackStack() // Go back to assigned signatory list
                                         },
                                         onError = { errorMsg ->
                                             Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()

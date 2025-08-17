@@ -48,11 +48,11 @@ import com.mnvths.schoolclearance.ClassSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssignClassesToSubjectScreen(
+fun AssignClassesToSignatoryScreen(
     navController: NavController,
     facultyId: Int,
-    subjectId: Int,
-    subjectName: String,
+    signatoryId: Int,
+    signatoryName: String,
     viewModel: AssignmentViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -71,7 +71,7 @@ fun AssignClassesToSubjectScreen(
     // Fetch data once on load
     LaunchedEffect(Unit) {
         viewModel.fetchAllClassSections()
-        viewModel.fetchAssignedSections(facultyId, subjectId) { existing ->
+        viewModel.fetchAssignedSections(facultyId, signatoryId) { existing ->
             assignedSections = existing
             isFetchingAssigned = false
             Log.d("AssignClasses", "Initial Assigned Sections: $existing")
@@ -87,7 +87,7 @@ fun AssignClassesToSubjectScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Assign $subjectName") },
+                title = { Text("Assign $signatoryName") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
@@ -160,16 +160,16 @@ fun AssignClassesToSubjectScreen(
                                 return@Button
                             }
 
-                            // In AssignClassesToSubjectScreen.kt, inside the Button's onClick lambda
+                            // In AssignClassesToSignatoryScreen.kt, inside the Button's onClick lambda
 
                             viewModel.assignClassesToFaculty(
                                 facultyId = facultyId,
-                                subjectId = subjectId,
+                                signatoryId = signatoryId,
                                 sectionIds = selectedSectionIds.toList(),
                                 onSuccess = {
                                     Toast.makeText(context, "Classes assigned successfully!", Toast.LENGTH_SHORT).show()
                                     // Refetch assigned sections to ensure UI is in sync with server
-                                    viewModel.fetchAssignedSections(facultyId, subjectId) { updatedSections ->
+                                    viewModel.fetchAssignedSections(facultyId, signatoryId) { updatedSections ->
                                         // Update the assignedSections state here
                                         assignedSections = updatedSections
                                         // Clear the selected sections list

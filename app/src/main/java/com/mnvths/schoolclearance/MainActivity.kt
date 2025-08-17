@@ -34,8 +34,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mnvths.schoolclearance.screen.AdminDashboard
-import com.mnvths.schoolclearance.screen.AssignClassesToSubjectScreen
-import com.mnvths.schoolclearance.screen.AssignSubjectToFacultyScreen
+import com.mnvths.schoolclearance.screen.AssignClassesToSignatoryScreen
+import com.mnvths.schoolclearance.screen.AssignSignatoryToFacultyScreen
 import com.mnvths.schoolclearance.screen.EditFacultyScreen
 import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
 import com.mnvths.schoolclearance.screen.LoginScreen
@@ -62,7 +62,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class ClearanceItem(
-    val subjectName: String,
+    val signatoryName: String,
     val schoolYear: String,
     val quarter: Int,
     val isCleared: Boolean
@@ -100,18 +100,18 @@ data class FacultyMember(
     val lastName: String
 )
 
-// NEW data class for a subject
+// NEW data class for a signatory
 @Serializable
-data class Subject(
+data class Signatory(
     val id: Int,
-    val subjectName: String
+    val signatoryName: String
 )
 
-// NEW data class for an assigned subject
+// NEW data class for an assigned signatory
 @Serializable
-data class AssignedSubject(
-    val subjectId: Int,
-    val subjectName: String
+data class AssignedSignatory(
+    val signatoryId: Int,
+    val signatoryName: String
 )
 
 // NEW data class for a class section
@@ -125,7 +125,7 @@ data class ClassSection(
 @Serializable
 data class AssignClassesRequest(
     val facultyId: Int,
-    val subjectId: Int,
+    val signatoryId: Int,
     val sectionIds: List<Int>
 )
 
@@ -194,7 +194,7 @@ class AuthViewModel : ViewModel() {
     }
 }
 
-// Updated ViewModel for Faculty to include editing functionality and assigned subjects
+// Updated ViewModel for Faculty to include editing functionality and assigned signatories
 class FacultyViewModel : ViewModel() {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
@@ -205,8 +205,8 @@ class FacultyViewModel : ViewModel() {
     private val _facultyList = mutableStateOf<List<FacultyMember>>(emptyList())
     val facultyList: State<List<FacultyMember>> = _facultyList
 
-    private val _assignedSubjects = mutableStateOf<List<AssignedSubject>>(emptyList())
-    val assignedSubjects: State<List<AssignedSubject>> = _assignedSubjects
+    private val _assignedSignatories = mutableStateOf<List<AssignedSignatory>>(emptyList())
+    val assignedSignatories: State<List<AssignedSignatory>> = _assignedSignatories
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -238,18 +238,18 @@ class FacultyViewModel : ViewModel() {
         }
     }
 
-    fun fetchAssignedSubjects(facultyId: Int) {
+    fun fetchAssignedSignatories(facultyId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-subjects/$facultyId")
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory/$facultyId")
                 if (response.status.isSuccess()) {
-                    val subjects: List<AssignedSubject> = response.body()
-                    _assignedSubjects.value = subjects
+                    val signatories: List<AssignedSignatory> = response.body()
+                    _assignedSignatories.value = signatories
                     _assignedSections.value = emptyMap()
                 } else {
-                    _error.value = "Failed to load assigned subjects."
+                    _error.value = "Failed to load assigned signatories."
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
@@ -259,14 +259,14 @@ class FacultyViewModel : ViewModel() {
         }
     }
 
-    fun fetchAssignedSections(facultyId: Int, subjectId: Int) {
+    fun fetchAssignedSections(facultyId: Int, signatoryId: Int) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-subject-sections/$facultyId/$subjectId")
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory-sections/$facultyId/$signatoryId")
                 if (response.status.isSuccess()) {
                     val sections: List<ClassSection> = response.body()
-                    _assignedSections.value = _assignedSections.value + (subjectId to sections)
+                    _assignedSections.value = _assignedSections.value + (signatoryId to sections)
                 } else {
                     // Handle error case
                 }
@@ -278,17 +278,17 @@ class FacultyViewModel : ViewModel() {
         }
     }
 
-    // New function to handle the deletion of a subject assignment
-    fun deleteAssignedSubject(facultyId: Int, subjectId: Int) {
+    // New function to handle the deletion of a signatory assignment
+    fun deleteAssignedSignatory(facultyId: Int, signatoryId: Int) {
         viewModelScope.launch {
             try {
-                Log.d("FacultyViewModel", "Attempting to delete subject $subjectId for faculty $facultyId")
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty-subjects/$facultyId/$subjectId")
+                Log.d("FacultyViewModel", "Attempting to delete signatory $signatoryId for faculty $facultyId")
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty-signatory/$facultyId/$signatoryId")
                 if (response.status.isSuccess()) {
-                    // Refresh the list of assigned subjects after a successful deletion
-                    fetchAssignedSubjects(facultyId)
+                    // Refresh the list of assigned signatories after a successful deletion
+                    fetchAssignedSignatories(facultyId)
                 } else {
-                    _error.value = "Failed to delete subject assignment."
+                    _error.value = "Failed to delete signatory assignment."
                     Log.e("FacultyViewModel", "Deletion failed: ${response.status.description}")
                 }
             } catch (e: Exception) {
@@ -325,8 +325,8 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    private val _subjects = mutableStateOf<List<Subject>>(emptyList())
-    val subjects: State<List<Subject>> = _subjects
+    private val _signatories = mutableStateOf<List<Signatory>>(emptyList())
+    val signatories: State<List<Signatory>> = _signatories
 
     private val _sections = mutableStateOf<List<ClassSection>>(emptyList())
     val sections: State<List<ClassSection>> = _sections
@@ -337,16 +337,16 @@ class AssignmentViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
-    fun fetchSubjects() {
+    fun fetchSignatories() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/subjects")
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/signatory")
                 if (response.status.isSuccess()) {
-                    _subjects.value = response.body()
+                    _signatories.value = response.body()
                 } else {
-                    _error.value = "Failed to load subjects."
+                    _error.value = "Failed to load signatories."
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
@@ -376,20 +376,20 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    fun assignSubjectToFaculty(
+    fun assignSignatoryToFaculty(
         facultyId: Int,
-        subjectId: Int,
+        signatoryId: Int,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/assign-subject") {
+                val response: HttpResponse = client.post("http://10.0.2.2:3000/assign-signatory") {
                     contentType(ContentType.Application.Json)
                     setBody(
                         mapOf(
                             "facultyId" to facultyId,
-                            "subjectId" to subjectId
+                            "signatoryId" to signatoryId
                         )
                     )
                 }
@@ -397,7 +397,7 @@ class AssignmentViewModel : ViewModel() {
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
-                    onError("Failed to select subject: ${response.status.description}. Details: $errorBody")
+                    onError("Failed to select signatory: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
@@ -407,13 +407,13 @@ class AssignmentViewModel : ViewModel() {
 
     fun fetchAssignedSections(
         facultyId: Int,
-        subjectId: Int,
+        signatoryId: Int,
         onResult: (List<ClassSection>) -> Unit
     ) {
         viewModelScope.launch {
             try {
                 val response: HttpResponse =
-                    client.get("http://10.0.2.2:3000/faculty-subject-sections/$facultyId/$subjectId")
+                    client.get("http://10.0.2.2:3000/faculty-signatory-sections/$facultyId/$signatoryId")
                 if (response.status.isSuccess()) {
                     val assigned: List<ClassSection> = response.body()
                     onResult(assigned)
@@ -428,7 +428,7 @@ class AssignmentViewModel : ViewModel() {
 
     fun assignClassesToFaculty(
         facultyId: Int,
-        subjectId: Int,
+        signatoryId: Int,
         sectionIds: List<Int>,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
@@ -437,7 +437,7 @@ class AssignmentViewModel : ViewModel() {
             try {
                 val response: HttpResponse = client.post("http://10.0.2.2:3000/assign-classes") {
                     contentType(ContentType.Application.Json)
-                    setBody(AssignClassesRequest(facultyId, subjectId, sectionIds))
+                    setBody(AssignClassesRequest(facultyId, signatoryId, sectionIds))
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
@@ -450,8 +450,6 @@ class AssignmentViewModel : ViewModel() {
             }
         }
     }
-
-
 }
 
 class MainActivity : ComponentActivity() {
@@ -469,11 +467,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-// -----------------------------------------------------------------------------
-// Composable Screens
-// -----------------------------------------------------------------------------
-
-
-
-
-

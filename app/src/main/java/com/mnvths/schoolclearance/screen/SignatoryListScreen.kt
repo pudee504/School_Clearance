@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun SubjectListScreen() {
+fun SignatoryListScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -20,6 +20,6 @@ fun SubjectListScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Subject Management Screen (coming soon!)", style = MaterialTheme.typography.titleLarge)
+        Text("Signatory Management Screen (coming soon!)", style = MaterialTheme.typography.titleLarge)
     }
 }
