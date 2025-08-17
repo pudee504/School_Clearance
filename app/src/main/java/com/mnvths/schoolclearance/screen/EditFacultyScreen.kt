@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -38,9 +40,12 @@ fun EditFacultyScreen(
     firstName: String,
     lastName: String,
     middleName: String?,
+    username: String, // Correctly receive username here
     viewModel: FacultyViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    var newUsername by remember { mutableStateOf(username) } // Initialize with passed username
+    var newPassword by remember { mutableStateOf("") } // Password is not passed, start with blank
     var newFirstName by remember { mutableStateOf(firstName) }
     var newLastName by remember { mutableStateOf(lastName) }
     var newMiddleName by remember { mutableStateOf(middleName ?: "") }
@@ -66,6 +71,19 @@ fun EditFacultyScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
+                value = newUsername,
+                onValueChange = { newUsername = it },
+                label = { Text("Username") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = newPassword,
+                onValueChange = { newPassword = it },
+                label = { Text("New Password (Leave blank to keep old)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            )
+            OutlinedTextField(
                 value = newFirstName,
                 onValueChange = { newFirstName = it },
                 label = { Text("First Name") },
@@ -87,6 +105,8 @@ fun EditFacultyScreen(
                 onClick = {
                     viewModel.editFaculty(
                         id = facultyId,
+                        username = newUsername,
+                        password = newPassword,
                         firstName = newFirstName,
                         lastName = newLastName,
                         middleName = newMiddleName.ifBlank { null },

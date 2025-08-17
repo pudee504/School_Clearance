@@ -55,6 +55,7 @@ fun FacultyDetailsScreen(
     firstName: String,
     lastName: String,
     middleName: String?,
+    username: String?,
     viewModel: FacultyViewModel = viewModel()
 ) {
     val assignedSignatories by viewModel.assignedSignatories

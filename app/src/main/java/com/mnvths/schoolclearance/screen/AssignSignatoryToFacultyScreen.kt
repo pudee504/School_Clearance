@@ -50,12 +50,20 @@ fun AssignSignatoryToFacultyScreen(
     viewModel: AssignmentViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val signatories by viewModel.signatories
+    val allSignatories by viewModel.signatories
+    val assignedSignatories by viewModel.assignedSignatories
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
+    // Fetch both lists on load
     LaunchedEffect(Unit) {
         viewModel.fetchSignatories()
+        viewModel.fetchAssignedSignatoriesForFaculty(facultyId)
+    }
+
+    // Filter the list of all signatories to remove those already assigned
+    val unassignedSignatories = allSignatories.filter { allSignatory ->
+        !assignedSignatories.any { it.signatoryId == allSignatory.id }
     }
 
     Scaffold(
@@ -84,7 +92,7 @@ fun AssignSignatoryToFacultyScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(signatories) { signatory ->
+                    items(unassignedSignatories) { signatory ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier
@@ -100,7 +108,7 @@ fun AssignSignatoryToFacultyScreen(
                                         signatoryId = signatory.id,
                                         onSuccess = {
                                             Toast.makeText(context, "${signatory.signatoryName} assigned to $facultyName!", Toast.LENGTH_SHORT).show()
-                                            navController.popBackStack() // Go back to assigned signatory list
+                                            navController.popBackStack()
                                         },
                                         onError = { errorMsg ->
                                             Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()

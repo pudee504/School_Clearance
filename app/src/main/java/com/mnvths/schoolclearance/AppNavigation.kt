@@ -16,6 +16,7 @@ import com.mnvths.schoolclearance.screen.FacultyDashboard
 import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
 import com.mnvths.schoolclearance.screen.LoginScreen
 import com.mnvths.schoolclearance.screen.StudentDetailScreen
+import com.mnvths.schoolclearance.screen.AddFacultyScreen // ⚠️ Add this import
 
 @Composable
 fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
@@ -97,15 +98,21 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // NEW navigation routes for managing faculty
+        // Corrected route for adding faculty
+        composable("addFaculty") {
+            AddFacultyScreen(navController = navController)
+        }
+
+        // Corrected navigation routes to include username
         composable(
-            route = "facultyDetails/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}",
+            route = "facultyDetails/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}/{username}",
             arguments = listOf(
                 navArgument("facultyId") { type = NavType.IntType },
                 navArgument("facultyName") { type = NavType.StringType },
                 navArgument("firstName") { type = NavType.StringType },
                 navArgument("lastName") { type = NavType.StringType },
-                navArgument("middleName") { type = NavType.StringType; nullable = true }
+                navArgument("middleName") { type = NavType.StringType; nullable = true },
+                navArgument("username") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("facultyId") ?: return@composable
@@ -113,23 +120,26 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             val firstName = backStackEntry.arguments?.getString("firstName") ?: ""
             val lastName = backStackEntry.arguments?.getString("lastName") ?: ""
             val middleName = backStackEntry.arguments?.getString("middleName")
+            val username = backStackEntry.arguments?.getString("username") ?: ""
             FacultyDetailsScreen(
                 navController = navController,
                 facultyId = id,
                 facultyName = name,
                 firstName = firstName,
                 lastName = lastName,
-                middleName = middleName
+                middleName = middleName,
+                username = username
             )
         }
         composable(
-            route = "editFaculty/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}",
+            route = "editFaculty/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}/{username}",
             arguments = listOf(
                 navArgument("facultyId") { type = NavType.IntType },
                 navArgument("facultyName") { type = NavType.StringType },
                 navArgument("firstName") { type = NavType.StringType },
                 navArgument("lastName") { type = NavType.StringType },
-                navArgument("middleName") { type = NavType.StringType; nullable = true }
+                navArgument("middleName") { type = NavType.StringType; nullable = true },
+                navArgument("username") { type = NavType.StringType }
             )
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("facultyId") ?: return@composable
@@ -137,13 +147,15 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             val firstName = backStackEntry.arguments?.getString("firstName") ?: ""
             val lastName = backStackEntry.arguments?.getString("lastName") ?: ""
             val middleName = backStackEntry.arguments?.getString("middleName")
+            val username = backStackEntry.arguments?.getString("username") ?: ""
             EditFacultyScreen(
                 navController = navController,
                 facultyId = id,
                 facultyName = name,
                 firstName = firstName,
                 lastName = lastName,
-                middleName = middleName
+                middleName = middleName,
+                username = username
             )
         }
         composable(

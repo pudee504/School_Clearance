@@ -97,7 +97,8 @@ data class FacultyMember(
     val name: String,
     val firstName: String,
     val middleName: String?,
-    val lastName: String
+    val lastName: String,
+    val username: String
 )
 
 // NEW data class for a signatory
@@ -298,12 +299,84 @@ class FacultyViewModel : ViewModel() {
         }
     }
 
-    fun editFaculty(id: Int, firstName: String, lastName: String, middleName: String?, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    // New function to add a faculty member
+    fun addFaculty(
+        username: String,
+        password: String,
+        firstName: String,
+        middleName: String?,
+        lastName: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
+                val response: HttpResponse = client.post("http://10.0.2.2:3000/faculty") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        mapOf(
+                            "username" to username,
+                            "password" to password,
+                            "firstName" to firstName,
+                            "middleName" to middleName,
+                            "lastName" to lastName
+                        )
+                    )
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    fetchFacultyList() // Refresh the list after adding a new user
+                } else {
+                    val errorBody = response.bodyAsText()
+                    onError("Failed to add faculty: ${response.status.description}. Details: $errorBody")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+    fun deleteFaculty(id: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty/$id")
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    fetchFacultyList() // Refresh the list
+                } else {
+                    onError("Failed to delete faculty: ${response.status.description}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+    fun editFaculty(
+        id: Int,
+        username: String,
+        password: String,
+        firstName: String,
+        lastName: String,
+        middleName: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val bodyMap = mutableMapOf<String, String?>(
+                    "username" to username,
+                    "firstName" to firstName,
+                    "lastName" to lastName,
+                    "middleName" to middleName
+                )
+
+                if (password.isNotBlank()) {
+                    bodyMap["password"] = password
+                }
+
                 val response: HttpResponse = client.put("http://10.0.2.2:3000/faculty/${id}") {
                     contentType(ContentType.Application.Json)
-                    setBody(mapOf("firstName" to firstName, "lastName" to lastName, "middleName" to middleName))
+                    setBody(bodyMap)
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
@@ -317,6 +390,7 @@ class FacultyViewModel : ViewModel() {
         }
     }
 }
+
 
 class AssignmentViewModel : ViewModel() {
     private val client = HttpClient(CIO) {
@@ -347,6 +421,28 @@ class AssignmentViewModel : ViewModel() {
                     _signatories.value = response.body()
                 } else {
                     _error.value = "Failed to load signatories."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // NEW FUNCTION
+    private val _assignedSignatories = mutableStateOf<List<AssignedSignatory>>(emptyList())
+    val assignedSignatories: State<List<AssignedSignatory>> = _assignedSignatories
+
+    fun fetchAssignedSignatoriesForFaculty(facultyId: Int) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory/$facultyId")
+                if (response.status.isSuccess()) {
+                    _assignedSignatories.value = response.body()
+                } else {
+                    _error.value = "Failed to load assigned signatories for this faculty."
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
@@ -450,6 +546,8 @@ class AssignmentViewModel : ViewModel() {
             }
         }
     }
+
+
 }
 
 class MainActivity : ComponentActivity() {
