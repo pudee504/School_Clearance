@@ -36,7 +36,7 @@ fun AdminNavGraph(navController: NavHostController) {
         composable("facultyList") {
             FacultyListScreen(navController = navController)
         }
-        composable("subjects") {
+        composable("signatories") {
             SignatoryListScreen(navController = navController)
         }
 

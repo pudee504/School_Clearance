@@ -62,8 +62,8 @@ fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavCon
                 )
                 Tab(
                     selected = currentRoute == "subjects",
-                    onClick = { adminNavController.navigate("subjects") },
-                    text = { Text("Subjects") }
+                    onClick = { adminNavController.navigate("signatories") },
+                    text = { Text("Signatories") }
                 )
             }
             // The nested NavHost
