@@ -10,8 +10,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
@@ -25,6 +27,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AddSectionRequest(val gradeLevel: String, val sectionName: String)
+
+// Add this data class for updating a section
+@Serializable
+data class UpdateSectionRequest(val gradeLevel: String, val sectionName: String)
+
 
 @Serializable
 data class StudentListItem(
@@ -53,7 +60,6 @@ class StudentManagementViewModel : ViewModel() {
     private val _students = MutableStateFlow<List<Student>>(emptyList())
     val students: StateFlow<List<Student>> = _students
 
-    // UI state
     val isLoading = MutableStateFlow(false)
     val error = MutableStateFlow<String?>(null)
 
@@ -94,7 +100,7 @@ class StudentManagementViewModel : ViewModel() {
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSections() // Refresh the list
+                    fetchSections()
                 } else {
                     onError("Failed to add section: ${response.status.description}")
                 }
@@ -152,6 +158,53 @@ class StudentManagementViewModel : ViewModel() {
                     fetchStudentsForSection(sectionId)
                 } else {
                     onError("Failed to add student: ${response.status.description}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+    // --- NEW FUNCTION FOR DELETING ---
+    fun deleteSection(
+        sectionId: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/sections/$sectionId")
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    fetchSections() // Refresh the list after deleting
+                } else {
+                    onError("Failed to delete section: ${response.status.description}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+    // --- NEW FUNCTION FOR UPDATING ---
+    fun updateSection(
+        sectionId: Int,
+        gradeLevel: String,
+        sectionName: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.put("http://10.0.2.2:3000/sections/$sectionId") {
+                    contentType(ContentType.Application.Json)
+                    setBody(UpdateSectionRequest(gradeLevel, sectionName))
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    fetchSections() // Refresh list on success
+                } else {
+                    onError("Failed to update section: ${response.status.description}")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")

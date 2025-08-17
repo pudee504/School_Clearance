@@ -15,6 +15,7 @@ import com.mnvths.schoolclearance.screen.AddStudentScreen
 import com.mnvths.schoolclearance.screen.AssignClassesToSignatoryScreen
 import com.mnvths.schoolclearance.screen.AssignSignatoryToFacultyScreen
 import com.mnvths.schoolclearance.screen.EditFacultyScreen
+import com.mnvths.schoolclearance.screen.EditSectionScreen
 import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
 import com.mnvths.schoolclearance.screen.FacultyListScreen
 import com.mnvths.schoolclearance.screen.SignatoryListScreen
@@ -45,6 +46,26 @@ fun AdminNavGraph(navController: NavHostController) {
         }
         composable("addFaculty") {
             AddFacultyScreen(navController = navController)
+        }
+
+        // In your NavHost
+        composable(
+            "editSection/{sectionId}/{gradeLevel}/{sectionName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0
+            val gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: ""
+            val sectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
+            EditSectionScreen(
+                navController = navController,
+                sectionId = sectionId,
+                initialGradeLevel = gradeLevel,
+                initialSectionName = sectionName
+            )
         }
         composable(
             route = "studentList/{sectionId}/{gradeLevel}/{sectionName}",

@@ -8,11 +8,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,8 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 import com.mnvths.schoolclearance.ClassSection
+import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 import java.time.Year
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -43,6 +43,11 @@ fun StudentManagementScreen(
     var startYear by remember { mutableStateOf(Year.now().value) }
     var quarter by remember { mutableIntStateOf(1) }
     var isEditing by remember { mutableStateOf(false) }
+
+    // State for the delete confirmation dialog
+    var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
+    var sectionToDelete by remember { mutableStateOf<ClassSection?>(null) }
+
 
     Column(
         modifier = Modifier
@@ -89,14 +94,44 @@ fun StudentManagementScreen(
                 items(sections) { section ->
                     SectionItem(
                         section = section,
-                        navController = navController,
+                        onClick = {
+                            navController.navigate("studentList/${section.sectionId}/${section.gradeLevel}/${section.sectionName}")
+                        },
+                        onEdit = {
+                            // Navigate to a new edit screen
+                            navController.navigate("editSection/${section.sectionId}/${section.gradeLevel}/${section.sectionName}")
+                        },
                         onDelete = {
-                            // TODO: Implement delete logic in ViewModel
+                            // Show the confirmation dialog
+                            sectionToDelete = section
+                            showDeleteConfirmationDialog = true
                         }
                     )
                 }
             }
         }
+    }
+
+    // --- DELETE CONFIRMATION DIALOG ---
+    if (showDeleteConfirmationDialog) {
+        DeleteConfirmationDialog(
+            sectionName = sectionToDelete?.sectionName ?: "",
+            onConfirm = {
+                sectionToDelete?.let {
+                    viewModel.deleteSection(
+                        sectionId = it.sectionId,
+                        onSuccess = { /* Handle success if needed */ },
+                        onError = { /* Handle error if needed */ }
+                    )
+                }
+                showDeleteConfirmationDialog = false
+                sectionToDelete = null
+            },
+            onDismiss = {
+                showDeleteConfirmationDialog = false
+                sectionToDelete = null
+            }
+        )
     }
 }
 
@@ -179,13 +214,16 @@ fun SchoolYearAndQuarterSelectors(
 }
 
 @Composable
-fun SectionItem(section: ClassSection, navController: NavController, onDelete: () -> Unit) {
+fun SectionItem(
+    section: ClassSection,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                navController.navigate("studentList/${section.sectionId}/${section.gradeLevel}/${section.sectionName}")
-            }
+            .clickable(onClick = onClick) // The whole card is clickable
     ) {
         Row(
             modifier = Modifier
@@ -194,21 +232,49 @@ fun SectionItem(section: ClassSection, navController: NavController, onDelete: (
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                // Correctly format the grade level for display
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Grade ${section.gradeLevel} - ${section.sectionName}",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { /* TODO: Implement edit section */ }) {
+                // Edit button now calls onEdit
+                IconButton(onClick = onEdit) {
                     Icon(Icons.Filled.Edit, contentDescription = "Edit Section")
                 }
+                // Delete button now calls onDelete
                 IconButton(onClick = onDelete) {
                     Icon(Icons.Filled.Delete, contentDescription = "Delete Section")
                 }
             }
         }
     }
+}
+
+// --- NEW COMPOSABLE FOR THE DIALOG ---
+@Composable
+fun DeleteConfirmationDialog(
+    sectionName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete Section") },
+        text = { Text("Are you sure you want to delete section \"$sectionName\"? This action cannot be undone.") },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
