@@ -130,6 +130,25 @@ data class AssignClassesRequest(
     val sectionIds: List<Int>
 )
 
+@Serializable
+data class AddSectionRequest(val gradeLevel: String, val sectionName: String)
+
+@Serializable
+data class StudentListItem(
+    val student_id: String,
+    val name: String
+)
+
+@Serializable
+data class AddStudentRequest(
+    val studentId: String,
+    val firstName: String,
+    val middleName: String?,
+    val lastName: String,
+    val sectionId: Int
+)
+
+
 
 // -----------------------------------------------------------------------------
 // ViewModels
@@ -392,7 +411,7 @@ class FacultyViewModel : ViewModel() {
 }
 
 
-class AssignmentViewModel : ViewModel() {
+    class AssignmentViewModel : ViewModel() {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true; isLenient = true })

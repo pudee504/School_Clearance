@@ -59,7 +59,7 @@ fun AdminDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavCon
             }
             when (selectedTabIndex) {
                 0 -> FacultyListScreen(navController = navController)
-                1 -> StudentListScreen()
+                1 -> StudentManagementScreen(navController = navController)
                 2 -> SignatoryListScreen()
             }
         }

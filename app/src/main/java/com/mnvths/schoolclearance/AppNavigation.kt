@@ -2,6 +2,8 @@ package com.mnvths.schoolclearance
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -16,38 +18,37 @@ import com.mnvths.schoolclearance.screen.FacultyDashboard
 import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
 import com.mnvths.schoolclearance.screen.LoginScreen
 import com.mnvths.schoolclearance.screen.StudentDetailScreen
-import com.mnvths.schoolclearance.screen.AddFacultyScreen // ⚠️ Add this import
+import com.mnvths.schoolclearance.screen.AddFacultyScreen
+import com.mnvths.schoolclearance.screen.AddSectionScreen
+import com.mnvths.schoolclearance.screen.AddStudentScreen
+import com.mnvths.schoolclearance.screen.StudentListScreen
+import com.mnvths.schoolclearance.screen.StudentManagementScreen
 
 @Composable
 fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
     val navController = rememberNavController()
+    val loggedInUser by authViewModel.loggedInUser
+    val isUserLoggedIn by authViewModel.isUserLoggedIn
 
-    LaunchedEffect(authViewModel.loggedInUser.value) {
-        authViewModel.loggedInUser.value?.let { user ->
-            when (user) {
-                is LoggedInUser.StudentUser -> navController.navigate("studentDetail") {
-                    popUpTo("login") { inclusive = true }
-                }
-                is LoggedInUser.FacultyAdminUser -> {
-                    when (user.user.role) {
-                        "faculty" -> navController.navigate("facultyDashboard") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                        "admin" -> navController.navigate("adminDashboard") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                        else -> {
-                            navController.navigate("login")
-                        }
-                    }
+    val startDestination = if (isUserLoggedIn) {
+        when (loggedInUser) {
+            is LoggedInUser.StudentUser -> "studentDetail"
+            is LoggedInUser.FacultyAdminUser -> {
+                when ((loggedInUser as LoggedInUser.FacultyAdminUser).user.role) {
+                    "faculty" -> "facultyDashboard"
+                    "admin" -> "adminDashboard"
+                    else -> "login"
                 }
             }
+            null -> "login"
         }
+    } else {
+        "login"
     }
 
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = startDestination
     ) {
         composable("login") {
             LoginScreen(
@@ -98,12 +99,50 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // Corrected route for adding faculty
+        composable("studentManagement") {
+            StudentManagementScreen(navController = navController)
+        }
+        composable("addSection") {
+            AddSectionScreen(navController = navController)
+        }
+        composable(
+            route = "studentList/{sectionId}/{gradeLevel}/{sectionName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val sectionId = backStackEntry.arguments?.getInt("sectionId") ?: return@composable
+            val gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: ""
+            val sectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
+            StudentListScreen(
+                navController = navController,
+                sectionId = sectionId,
+                gradeLevel = gradeLevel,
+                sectionName = sectionName
+            )
+        }
+        composable(
+            route = "addStudent/{sectionId}/{sectionName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("sectionName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val sectionId = backStackEntry.arguments?.getInt("sectionId") ?: return@composable
+            val sectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
+            AddStudentScreen(
+                navController = navController,
+                sectionId = sectionId,
+                sectionName = sectionName
+            )
+        }
+
         composable("addFaculty") {
             AddFacultyScreen(navController = navController)
         }
 
-        // Corrected navigation routes to include username
         composable(
             route = "facultyDetails/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}/{username}",
             arguments = listOf(
