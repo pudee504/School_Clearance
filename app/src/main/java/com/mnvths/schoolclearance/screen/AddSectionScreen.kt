@@ -22,7 +22,6 @@ fun AddSectionScreen(
     viewModel: StudentManagementViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    // Use a nullable string for gradeLevel to represent no selection initially
     var selectedGradeLevel by remember { mutableStateOf<String?>(null) }
     var sectionName by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
@@ -52,7 +51,8 @@ fun AddSectionScreen(
                 modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.TopStart)
             ) {
                 OutlinedTextField(
-                    value = selectedGradeLevel ?: "Select Grade Level",
+                    // Format the displayed value here
+                    value = selectedGradeLevel?.let { "Grade $it" } ?: "Select Grade Level",
                     onValueChange = {}, // The value is changed by the dropdown, not direct input
                     label = { Text("Grade Level") },
                     readOnly = true, // Prevents keyboard from appearing
