@@ -9,6 +9,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.mnvths.schoolclearance.screen.AddEditSignatoryScreen
 import com.mnvths.schoolclearance.screen.AddFacultyScreen
 import com.mnvths.schoolclearance.screen.AddSectionScreen
 import com.mnvths.schoolclearance.screen.AddStudentScreen
@@ -62,6 +63,36 @@ fun AdminNavGraph(navController: NavHostController) {
         }
 
         // ✅ In your NavHost
+
+        // ✅ In your NavHost
+
+        composable("signatoryList") {
+            SignatoryListScreen(navController = navController)
+        }
+
+// Route for adding a new signatory
+        composable("addEditSignatory") {
+            AddEditSignatoryScreen(
+                navController = navController,
+                signatoryId = null,
+                initialName = null
+            )
+        }
+
+// Route for editing an existing signatory
+        composable(
+            "addEditSignatory/{signatoryId}/{signatoryName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AddEditSignatoryScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId"),
+                initialName = backStackEntry.arguments?.getString("signatoryName")
+            )
+        }
 
         composable(
             "clearanceScreen/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
