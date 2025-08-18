@@ -16,6 +16,7 @@ import com.mnvths.schoolclearance.screen.AssignClassesToSignatoryScreen
 import com.mnvths.schoolclearance.screen.AssignSignatoryToFacultyScreen
 import com.mnvths.schoolclearance.screen.EditFacultyScreen
 import com.mnvths.schoolclearance.screen.EditSectionScreen
+import com.mnvths.schoolclearance.screen.EditStudentScreen
 import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
 import com.mnvths.schoolclearance.screen.FacultyListScreen
 import com.mnvths.schoolclearance.screen.SignatoryListScreen
@@ -49,6 +50,16 @@ fun AdminNavGraph(navController: NavHostController) {
         }
 
         // In your NavHost
+        composable(
+            "editStudent/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            EditStudentScreen(
+                navController = navController,
+                studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+            )
+        }
+
         composable(
             "editSection/{sectionId}/{gradeLevel}/{sectionName}",
             arguments = listOf(

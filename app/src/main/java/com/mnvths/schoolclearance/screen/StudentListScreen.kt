@@ -105,7 +105,7 @@ fun StudentListScreen(
                         StudentItem(
                             student = student,
                             onEditClick = {
-                                Toast.makeText(context, "Edit not implemented yet.", Toast.LENGTH_SHORT).show()
+                                navController.navigate("editStudent/${student.id}")
                             },
                             onDeleteClick = {
                                 studentToDelete = student

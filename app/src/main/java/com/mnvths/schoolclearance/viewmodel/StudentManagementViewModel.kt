@@ -22,6 +22,7 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -51,12 +52,36 @@ data class AddStudentRequest(
     val sectionId: Int,
     val password: String
 )
+
+@Serializable
+data class StudentDetails(
+    val studentId: String,
+    val firstName: String,
+    val middleName: String?,
+    val lastName: String,
+    val sectionId: Int,
+    val gradeLevel: String
+)
+
+@Serializable
+data class UpdateStudentRequest(
+    val studentId: String,
+    val firstName: String,
+    val middleName: String?,
+    val lastName: String,
+    val password: String?, // Password is optional
+    val sectionId: Int
+)
 class StudentManagementViewModel : ViewModel() {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json()
         }
     }
+
+    // ✅ 2. Add StateFlow for single student details
+    private val _studentDetails = MutableStateFlow<StudentDetails?>(null)
+    val studentDetails: StateFlow<StudentDetails?> = _studentDetails.asStateFlow()
 
     private val _sections = MutableStateFlow<List<ClassSection>>(emptyList())
     val sections: StateFlow<List<ClassSection>> = _sections
@@ -70,6 +95,8 @@ class StudentManagementViewModel : ViewModel() {
     init {
         fetchSections()
     }
+
+
 
     fun fetchSections() {
         viewModelScope.launch {
@@ -88,6 +115,54 @@ class StudentManagementViewModel : ViewModel() {
                 isLoading.value = false
             }
         }
+    }
+
+    fun fetchStudentDetails(studentId: String) {
+        viewModelScope.launch {
+            isLoading.value = true
+            error.value = null
+            try {
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/students/$studentId")
+                if (response.status.isSuccess()) {
+                    _studentDetails.value = response.body()
+                } else {
+                    error.value = "Failed to load student details."
+                }
+            } catch (e: Exception) {
+                error.value = "Network error: ${e.message}"
+            } finally {
+                isLoading.value = false
+            }
+        }
+    }
+
+    fun updateStudent(
+        originalStudentId: String,
+        updatedDetails: UpdateStudentRequest,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/$originalStudentId") {
+                    contentType(ContentType.Application.Json)
+                    setBody(updatedDetails)
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                } else {
+                    val errorBody = response.bodyAsText()
+                    onError(errorBody)
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+    // Helper function to clear the details when navigating away
+    fun clearStudentDetails() {
+        _studentDetails.value = null
     }
 
     fun addSection(
