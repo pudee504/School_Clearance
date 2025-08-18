@@ -1,6 +1,7 @@
 package com.mnvths.schoolclearance.screen
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -219,7 +220,14 @@ fun FacultyDetailsScreen(
                                             Column(modifier = Modifier.padding(top = 8.dp)) {
                                                 sectionsForSignatory.forEach { section ->
                                                     Row(
-                                                        modifier = Modifier.fillMaxWidth(),
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clickable {
+                                                                navController.navigate(
+                                                                    "clearanceScreen/${section.sectionId}/${signatory.signatoryId}/${section.gradeLevel}/${section.sectionName}/${signatory.signatoryName}"
+                                                                )
+                                                            }
+                                                            .padding(vertical = 8.dp),
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
