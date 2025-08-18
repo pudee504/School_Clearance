@@ -1,51 +1,25 @@
 package com.mnvths.schoolclearance.screen
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.mnvths.schoolclearance.FacultyViewModel
+import com.mnvths.schoolclearance.ClassSection
 import com.mnvths.schoolclearance.AssignedSignatory
+import com.mnvths.schoolclearance.FacultyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,31 +37,31 @@ fun FacultyDetailsScreen(
     val assignedSections by viewModel.assignedSections
     val isLoading by viewModel.isLoading
     val error by viewModel.error
+    val context = LocalContext.current
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    // State for deleting a whole signatory assignment
+    var showDeleteSignatoryDialog by remember { mutableStateOf(false) }
     var signatoryToDelete by remember { mutableStateOf<AssignedSignatory?>(null) }
+
+    // State for deleting a single section assignment
+    var showDeleteSectionDialog by remember { mutableStateOf(false) }
+    var sectionToDelete by remember { mutableStateOf<ClassSection?>(null) }
+    var signatoryOfSection by remember { mutableStateOf<AssignedSignatory?>(null) }
+
 
     var expandedSignatoryId by remember { mutableStateOf<Int?>(null) }
     val sectionsLoading = remember { mutableStateOf(mapOf<Int, Boolean>()) }
 
+    // Fetches signatories when the screen is first loaded
     LaunchedEffect(facultyId) {
         viewModel.fetchAssignedSignatories(facultyId)
     }
 
+    // Refreshes signatories when returning to this screen (e.g., from "Assign Signatory")
     val backStackEntry by navController.currentBackStackEntryAsState()
     LaunchedEffect(backStackEntry) {
         if (backStackEntry?.destination?.route?.startsWith("facultyDetails") == true) {
             viewModel.fetchAssignedSignatories(facultyId)
-        }
-    }
-
-    LaunchedEffect(assignedSections) {
-        assignedSections.forEach { (signatoryId, sections) ->
-            if (sectionsLoading.value[signatoryId] == true) {
-                sectionsLoading.value = sectionsLoading.value.toMutableMap().apply {
-                    this[signatoryId] = false
-                }
-            }
         }
     }
 
@@ -122,6 +96,7 @@ fun FacultyDetailsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text(text = "Assigned Signatories:", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
+
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -134,9 +109,7 @@ fun FacultyDetailsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(assignedSignatories) { signatory ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -149,73 +122,41 @@ fun FacultyDetailsScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(
-                                            onClick = {
-                                                navController.navigate("assignClassesToSignatory/$facultyId/$facultyName/${signatory.signatoryId}/${signatory.signatoryName}")
-                                            },
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Add,
-                                                contentDescription = "Assign Class"
-                                            )
+                                        IconButton(onClick = { navController.navigate("assignClassesToSignatory/$facultyId/$facultyName/${signatory.signatoryId}/${signatory.signatoryName}") }) {
+                                            Icon(Icons.Default.Add, "Assign Class")
                                         }
-                                        IconButton(
-                                            onClick = {
-                                                signatoryToDelete = signatory
-                                                showDeleteDialog = true
-                                            },
-                                            modifier = Modifier.size(48.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "Delete Signatory"
-                                            )
+                                        IconButton(onClick = {
+                                            signatoryToDelete = signatory
+                                            showDeleteSignatoryDialog = true
+                                        }) {
+                                            Icon(Icons.Default.Delete, "Delete Signatory")
                                         }
-                                        IconButton(
-                                            onClick = {
-                                                if (expandedSignatoryId == signatory.signatoryId) {
-                                                    expandedSignatoryId = null
-                                                } else {
-                                                    if (!assignedSections.containsKey(signatory.signatoryId)) {
-                                                        sectionsLoading.value = sectionsLoading.value.toMutableMap().apply {
-                                                            this[signatory.signatoryId] = true
-                                                        }
-                                                        viewModel.fetchAssignedSections(
-                                                            facultyId,
-                                                            signatory.signatoryId
-                                                        )
-                                                    }
-                                                    expandedSignatoryId = signatory.signatoryId
+                                        IconButton(onClick = {
+                                            if (expandedSignatoryId == signatory.signatoryId) {
+                                                expandedSignatoryId = null
+                                            } else {
+                                                if (!assignedSections.containsKey(signatory.signatoryId)) {
+                                                    viewModel.fetchAssignedSections(facultyId, signatory.signatoryId)
                                                 }
+                                                expandedSignatoryId = signatory.signatoryId
                                             }
-                                        ) {
-                                            Icon(
-                                                imageVector = if (expandedSignatoryId == signatory.signatoryId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                                contentDescription = "Expand or collapse"
-                                            )
+                                        }) {
+                                            Icon(if (expandedSignatoryId == signatory.signatoryId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, "Expand")
                                         }
                                     }
                                 }
+
                                 AnimatedVisibility(visible = expandedSignatoryId == signatory.signatoryId) {
                                     val sectionsForSignatory = assignedSections[signatory.signatoryId]
-
                                     when {
-                                        sectionsLoading.value[signatory.signatoryId] == true -> {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.padding(
-                                                    top = 8.dp
-                                                ).align(Alignment.CenterHorizontally)
-                                            )
+                                        sectionsForSignatory == null -> {
+                                            Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                                CircularProgressIndicator()
+                                            }
                                         }
-
-                                        sectionsForSignatory.isNullOrEmpty() -> {
-                                            Text(
-                                                text = "No classes assigned yet.",
-                                                modifier = Modifier.padding(top = 8.dp)
-                                            )
+                                        sectionsForSignatory.isEmpty() -> {
+                                            Text("No classes assigned yet.", modifier = Modifier.padding(top = 8.dp))
                                         }
-
                                         else -> {
                                             Column(modifier = Modifier.padding(top = 8.dp)) {
                                                 sectionsForSignatory.forEach { section ->
@@ -223,11 +164,9 @@ fun FacultyDetailsScreen(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .clickable {
-                                                                navController.navigate(
-                                                                    "clearanceScreen/${section.sectionId}/${signatory.signatoryId}/${section.gradeLevel}/${section.sectionName}/${signatory.signatoryName}"
-                                                                )
+                                                                navController.navigate("clearanceScreen/${section.sectionId}/${signatory.signatoryId}/${section.gradeLevel}/${section.sectionName}/${signatory.signatoryName}")
                                                             }
-                                                            .padding(vertical = 8.dp),
+                                                            .padding(vertical = 4.dp),
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
@@ -235,11 +174,12 @@ fun FacultyDetailsScreen(
                                                             text = "${section.gradeLevel} - ${section.sectionName}",
                                                             modifier = Modifier.padding(start = 16.dp)
                                                         )
-                                                        IconButton(onClick = { /* TODO: Implement delete section logic */ }) {
-                                                            Icon(
-                                                                Icons.Default.Delete,
-                                                                contentDescription = "Delete Section"
-                                                            )
+                                                        IconButton(onClick = {
+                                                            sectionToDelete = section
+                                                            signatoryOfSection = signatory // Remember which signatory it belongs to
+                                                            showDeleteSectionDialog = true
+                                                        }) {
+                                                            Icon(Icons.Default.Delete, contentDescription = "Delete Section Assignment")
                                                         }
                                                     }
                                                 }
@@ -255,38 +195,60 @@ fun FacultyDetailsScreen(
         }
     }
 
-    if (showDeleteDialog && signatoryToDelete != null) {
+    // Dialog for deleting a whole signatory
+    if (showDeleteSignatoryDialog && signatoryToDelete != null) {
         AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-                signatoryToDelete = null
-            },
-            title = {
-                Text(text = "Confirm Deletion")
-            },
-            text = {
-                Text(text = "Are you sure you want to delete the assignment for ${signatoryToDelete?.signatoryName}?")
-            },
+            onDismissRequest = { showDeleteSignatoryDialog = false },
+            title = { Text(text = "Confirm Deletion") },
+            text = { Text(text = "Are you sure you want to delete the assignment for ${signatoryToDelete?.signatoryName}? This will un-assign all sections for this subject.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         signatoryToDelete?.let { signatory ->
                             viewModel.deleteAssignedSignatory(facultyId, signatory.signatoryId)
                         }
-                        showDeleteDialog = false
-                        signatoryToDelete = null
+                        showDeleteSignatoryDialog = false
                     }
                 ) {
                     Text("Delete")
                 }
             },
             dismissButton = {
+                TextButton(onClick = { showDeleteSignatoryDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Dialog for deleting a single section assignment
+    if (showDeleteSectionDialog && sectionToDelete != null && signatoryOfSection != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSectionDialog = false },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to un-assign section '${sectionToDelete?.sectionName}' from '${signatoryOfSection?.signatoryName}'?") },
+            confirmButton = {
                 TextButton(
                     onClick = {
-                        showDeleteDialog = false
-                        signatoryToDelete = null
+                        viewModel.deleteAssignedSection(
+                            facultyId = facultyId,
+                            signatoryId = signatoryOfSection!!.signatoryId,
+                            sectionId = sectionToDelete!!.sectionId,
+                            onSuccess = {
+                                Toast.makeText(context, "Assignment deleted.", Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { errorMsg ->
+                                Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                        showDeleteSectionDialog = false
                     }
                 ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSectionDialog = false }) {
                     Text("Cancel")
                 }
             }

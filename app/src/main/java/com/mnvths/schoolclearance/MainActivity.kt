@@ -145,6 +145,12 @@ data class AddStudentRequest(
     val sectionId: Int
 )
 
+@Serializable
+data class AssignedSection(
+    val sectionId: Int,
+    val gradeLevel: String,
+    val sectionName: String
+)
 
 
 // -----------------------------------------------------------------------------
@@ -251,6 +257,30 @@ class FacultyViewModel : ViewModel() {
                 _error.value = "Network error: ${e.message}"
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteAssignedSection(
+        facultyId: Int,
+        signatoryId: Int,
+        sectionId: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty/$facultyId/signatory/$signatoryId/section/$sectionId")
+
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    // After deleting, refresh the list of sections for this signatory
+                    fetchAssignedSections(facultyId, signatoryId)
+                } else {
+                    onError("Failed to delete assignment: ${response.bodyAsText()}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
             }
         }
     }
