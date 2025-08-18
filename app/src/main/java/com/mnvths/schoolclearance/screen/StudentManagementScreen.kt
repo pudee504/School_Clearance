@@ -48,6 +48,16 @@ fun StudentManagementScreen(
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var sectionToDelete by remember { mutableStateOf<ClassSection?>(null) }
 
+    val sortedSections = remember(sections) {
+        sections.sortedWith(
+            compareBy(
+                // First, sort by the numeric part of the grade level
+                { it.gradeLevel.filter { char -> char.isDigit() }.toIntOrNull() ?: 0 },
+                // Then, sort by the section name alphabetically
+                { it.sectionName }
+            )
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -91,7 +101,7 @@ fun StudentManagementScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(sections) { section ->
+                items(sortedSections) { section ->
                     SectionItem(
                         section = section,
                         onClick = {
