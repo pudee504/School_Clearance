@@ -21,11 +21,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.mnvths.schoolclearance.screen.ClearanceStatusItem
-import com.mnvths.schoolclearance.Student
+import com.mnvths.schoolclearance.StudentProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StudentDetailScreen(student: Student, onSignOut: () -> Unit) {
+fun StudentDetailScreen(student: StudentProfile, onSignOut: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(

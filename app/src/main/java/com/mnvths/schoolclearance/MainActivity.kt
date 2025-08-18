@@ -1,10 +1,12 @@
 package com.mnvths.schoolclearance
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -69,7 +71,7 @@ data class ClearanceItem(
 )
 
 @Serializable
-data class Student(
+data class StudentProfile(
     val id: String,
     val name: String,
     val role: String,
@@ -86,7 +88,7 @@ data class OtherUser(
 )
 
 sealed class LoggedInUser {
-    data class StudentUser(val student: Student) : LoggedInUser()
+    data class StudentUser(val student: StudentProfile) : LoggedInUser()
     data class FacultyAdminUser(val user: OtherUser) : LoggedInUser()
 }
 
@@ -133,11 +135,6 @@ data class AssignClassesRequest(
 @Serializable
 data class AddSectionRequest(val gradeLevel: String, val sectionName: String)
 
-@Serializable
-data class StudentListItem(
-    val student_id: String,
-    val name: String
-)
 
 @Serializable
 data class AddStudentRequest(
@@ -188,7 +185,7 @@ class AuthViewModel : ViewModel() {
                     val role = jsonObject["role"]?.jsonPrimitive?.content
 
                     if (role == "student") {
-                        val student = json.decodeFromString<Student>(responseText)
+                        val student = json.decodeFromString<StudentProfile>(responseText)
                         _loggedInUser.value = LoggedInUser.StudentUser(student)
                     } else {
                         val otherUser = json.decodeFromString<OtherUser>(responseText)
@@ -570,6 +567,7 @@ class FacultyViewModel : ViewModel() {
 }
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

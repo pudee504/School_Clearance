@@ -1,18 +1,23 @@
 package com.mnvths.schoolclearance.screen
 
-// in a new file: AddStudentScreen.kt
-
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lint.kotlin.metadata.Visibility
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 
@@ -29,6 +34,9 @@ fun AddStudentScreen(
     var firstName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
+    // ✅ 1. Add state for the password and its visibility
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -65,7 +73,7 @@ fun AddStudentScreen(
             OutlinedTextField(
                 value = middleName,
                 onValueChange = { middleName = it },
-                label = { Text("Middle Name") },
+                label = { Text("Middle Name (Optional)") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
@@ -74,15 +82,36 @@ fun AddStudentScreen(
                 label = { Text("Last Name") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // ✅ 2. Add the Password Text Field
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    val description = if (passwordVisible) "Hide password" else "Show password"
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = description)
+                    }
+                }
+            )
+
             Button(
                 onClick = {
-                    if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()) {
+                    // ✅ 3. Update the validation check and the viewModel call
+                    if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && password.isNotBlank()) {
                         viewModel.addStudent(
                             studentId = studentId,
                             firstName = firstName,
                             middleName = middleName.takeIf { it.isNotBlank() },
                             lastName = lastName,
                             sectionId = sectionId,
+                            password = password, // <-- Pass the password
                             onSuccess = {
                                 Toast.makeText(context, "Student added successfully!", Toast.LENGTH_SHORT).show()
                                 navController.popBackStack()
@@ -92,7 +121,7 @@ fun AddStudentScreen(
                             }
                         )
                     } else {
-                        Toast.makeText(context, "Please fill all required fields.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Please fill all required fields, including password.", Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
