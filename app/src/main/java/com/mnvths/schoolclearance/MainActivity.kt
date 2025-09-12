@@ -43,7 +43,6 @@ import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
 import com.mnvths.schoolclearance.screen.LoginScreen
 import com.mnvths.schoolclearance.screen.StudentDetailScreen
 import com.mnvths.schoolclearance.ui.theme.SchoolClearanceTheme
-import kotlinx.coroutines.launch
 import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.*
@@ -52,6 +51,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -64,7 +64,9 @@ import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class ClearanceItem(
-    val signatoryName: String,
+    // ✅ FIX 1: Use @SerialName to match the key from server.js ("subjectName")
+    @SerialName("subjectName")
+    val signatoryName: String?,
     val schoolYear: String,
     val quarter: Int,
     val isCleared: Boolean
@@ -438,7 +440,7 @@ class FacultyViewModel : ViewModel() {
 }
 
 
-    class AssignmentViewModel : ViewModel() {
+class AssignmentViewModel : ViewModel() {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true; isLenient = true })

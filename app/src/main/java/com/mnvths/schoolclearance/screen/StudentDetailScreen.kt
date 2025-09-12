@@ -20,7 +20,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.mnvths.schoolclearance.screen.ClearanceStatusItem
 import com.mnvths.schoolclearance.StudentProfile
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,8 +64,9 @@ fun StudentDetailScreen(student: StudentProfile, onSignOut: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(student.clearanceStatus) { item ->
+                    // ✅ FIX 2: Provide a default value in case the name is null
                     ClearanceStatusItem(
-                        signatoryName = item.signatoryName,
+                        signatoryName = item.signatoryName ?: "Unknown Signatory",
                         isCleared = item.isCleared
                     )
                 }

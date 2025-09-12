@@ -1,4 +1,3 @@
-// AppNavigation.kt
 package com.mnvths.schoolclearance
 
 import android.os.Build
@@ -22,14 +21,12 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
     val isUserLoggedIn by authViewModel.isUserLoggedIn
 
     val startDestination = if (isUserLoggedIn) {
-        when (loggedInUser) {
+        when (val user = loggedInUser) {
             is LoggedInUser.StudentUser -> "studentDetail"
-            is LoggedInUser.FacultyAdminUser -> {
-                when ((loggedInUser as LoggedInUser.FacultyAdminUser).user.role) {
-                    "faculty" -> "facultyDashboard"
-                    "admin" -> "adminDashboard"
-                    else -> "login"
-                }
+            is LoggedInUser.FacultyAdminUser -> when (user.user.role) {
+                "faculty" -> "facultyDashboard"
+                "admin" -> "adminDashboard"
+                else -> "login"
             }
             null -> "login"
         }
@@ -77,14 +74,13 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         composable("adminDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
-                // AdminDashboard now contains its own nested NavHost
+                // ✅ FIX: Removed the navController parameter from the AdminDashboard call.
                 AdminDashboard(
                     user = user,
                     onSignOut = {
                         authViewModel.logout()
                         navController.navigate("login") { popUpTo("login") { inclusive = true } }
-                    },
-                    navController = navController
+                    }
                 )
             }
         }
