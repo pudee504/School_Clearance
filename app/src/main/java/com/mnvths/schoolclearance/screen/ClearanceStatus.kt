@@ -11,15 +11,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ClearanceStatusItem(signatoryName: String, isCleared: Boolean) {
+fun ClearanceStatusItem(
+    subjectName: String, // ✅ FIX: Renamed parameter to match the rest of the app
+    isCleared: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (isCleared) Color.Green.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f)
+            // Using theme colors is better for light/dark mode compatibility
+            containerColor = if (isCleared) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
         )
     ) {
         Row(
@@ -29,10 +32,15 @@ fun ClearanceStatusItem(signatoryName: String, isCleared: Boolean) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = signatoryName, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = subjectName,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isCleared) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
             Text(
                 text = if (isCleared) "Cleared" else "Not Cleared",
-                color = if (isCleared) Color.Green else Color.Red,
+                color = if (isCleared) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )
         }

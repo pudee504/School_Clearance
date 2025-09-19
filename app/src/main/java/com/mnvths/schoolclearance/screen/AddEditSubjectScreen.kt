@@ -1,10 +1,9 @@
-// In a new file: AddEditSignatoryScreen.kt
 package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -12,27 +11,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
+import com.mnvths.schoolclearance.viewmodel.SubjectViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEditSignatoryScreen(
+fun AddEditSubjectScreen( // ✅ RENAMED function
     navController: NavController,
-    signatoryId: Int?,
+    subjectId: Int?, // ✅ RENAMED parameter
     initialName: String?,
-    viewModel: SignatoryViewModel = viewModel()
+    viewModel: SubjectViewModel = viewModel() // ✅ Use the correct ViewModel
 ) {
     val context = LocalContext.current
-    val isEditing = signatoryId != null
+    val isEditing = subjectId != null // ✅ Use renamed parameter
     var name by remember { mutableStateOf(initialName ?: "") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Signatory" else "Add Signatory") },
+                title = { Text(if (isEditing) "Edit Subject" else "Add Subject") }, // ✅ Updated title
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 }
             )
@@ -48,7 +47,7 @@ fun AddEditSignatoryScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Signatory Name (e.g., Mathematics)") },
+                label = { Text("Subject Name (e.g., Mathematics)") }, // ✅ Updated label
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -59,8 +58,8 @@ fun AddEditSignatoryScreen(
                         return@Button
                     }
                     if (isEditing) {
-                        viewModel.updateSignatory(
-                            id = signatoryId!!,
+                        viewModel.updateSubject( // ✅ Call correct ViewModel function
+                            id = subjectId!!, // ✅ Use renamed parameter
                             name = name,
                             onSuccess = {
                                 Toast.makeText(context, "Updated successfully.", Toast.LENGTH_SHORT).show()
@@ -69,7 +68,7 @@ fun AddEditSignatoryScreen(
                             onError = { Toast.makeText(context, "Error: $it", Toast.LENGTH_LONG).show() }
                         )
                     } else {
-                        viewModel.addSignatory(
+                        viewModel.addSubject( // ✅ Call correct ViewModel function
                             name = name,
                             onSuccess = {
                                 Toast.makeText(context, "Added successfully.", Toast.LENGTH_SHORT).show()

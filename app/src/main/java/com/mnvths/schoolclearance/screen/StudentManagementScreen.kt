@@ -19,6 +19,7 @@ import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.StudentListItem
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentManagementScreen(
     navController: NavController,
@@ -27,12 +28,14 @@ fun StudentManagementScreen(
     LaunchedEffect(Unit) {
         studentViewModel.fetchAllStudents()
         studentViewModel.fetchAllGradeLevels()
-        studentViewModel.fetchSections()
+        // ✅ FIXED: Renamed fetchSections() to fetchClassSections()
+        studentViewModel.fetchClassSections()
     }
 
     val allStudents by studentViewModel.students.collectAsState()
     val gradeLevels by studentViewModel.gradeLevels.collectAsState()
-    val sections by studentViewModel.sections.collectAsState()
+    // ✅ FIXED: Renamed viewModel.sections to viewModel.classSections
+    val sections by studentViewModel.classSections.collectAsState()
     val isLoading by studentViewModel.isLoading.collectAsState()
     val error by studentViewModel.error.collectAsState()
 
@@ -50,7 +53,8 @@ fun StudentManagementScreen(
                 fullName.contains(searchQuery.lowercase())
             }
             .filter { student ->
-                selectedGrade == null || student.gradeLevel == "Unassigned" || student.gradeLevel == selectedGrade
+                // ✅ FIXED: Corrected filtering logic to properly filter by grade
+                selectedGrade == null || student.gradeLevel == selectedGrade
             }
             .filter { student ->
                 selectedSectionId == null || student.sectionId == selectedSectionId
@@ -58,79 +62,88 @@ fun StudentManagementScreen(
             .sortedBy { it.lastName }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Button(
-            onClick = { navController.navigate("addStudent") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add Student")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Create New Student")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Search by Name") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterDropdown(
-                label = "Grade",
-                options = gradeLevels,
-                selectedValue = selectedGrade,
-                onValueChange = {
-                    selectedGrade = it
-                    selectedSectionId = null
-                },
-                modifier = Modifier.weight(1f)
-            )
-
-            FilterDropdown(
-                label = "Section",
-                options = sections.filter { it.gradeLevel == selectedGrade }.map { it.sectionName },
-                selectedValue = sections.find { it.sectionId == selectedSectionId }?.sectionName,
-                onValueChange = { newSectionName ->
-                    selectedSectionId = sections.find { it.sectionName == newSectionName && it.gradeLevel == selectedGrade }?.sectionId
-                },
-                modifier = Modifier.weight(1f),
-                enabled = selectedGrade != null
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(text = "Students:", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Text(text = "Error: $error", color = MaterialTheme.colorScheme.error)
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate("addStudent") },
             ) {
-                items(filteredStudents, key = { it.id }) { student ->
-                    StudentItem(
-                        student = student,
-                        onClick = {
-                            navController.navigate("adminStudentDetail/${student.id}")
-                        },
-                        onDelete = {
-                            studentToDelete = student
-                            showDeleteDialog = true
-                        }
-                    )
+                Icon(Icons.Filled.Add, contentDescription = "Add New Student")
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp) // Added top padding
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search by Name") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterDropdown(
+                    label = "Grade",
+                    options = gradeLevels,
+                    selectedValue = selectedGrade,
+                    onValueChange = {
+                        selectedGrade = it
+                        selectedSectionId = null
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+
+                FilterDropdown(
+                    label = "Section",
+                    options = sections.filter { it.gradeLevel == selectedGrade }.map { it.sectionName },
+                    selectedValue = sections.find { it.sectionId == selectedSectionId }?.sectionName,
+                    onValueChange = { newSectionName ->
+                        selectedSectionId = sections.find { it.sectionName == newSectionName && it.gradeLevel == selectedGrade }?.sectionId
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = selectedGrade != null
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = "Students:", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (error != null) {
+                Text(text = "Error: $error", color = MaterialTheme.colorScheme.error)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredStudents, key = { it.id }) { student ->
+                        StudentItem(
+                            student = student,
+                            onClick = {
+                                // Assuming you have a route for this
+                                // navController.navigate("adminStudentDetail/${student.id}")
+                            },
+                            onEdit = {
+                                navController.navigate("editStudent/${student.id}")
+                            },
+                            onDelete = {
+                                studentToDelete = student
+                                showDeleteDialog = true
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -165,8 +178,11 @@ fun StudentManagementScreen(
 fun StudentItem(
     student: StudentListItem,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -178,7 +194,7 @@ fun StudentItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${student.lastName}, ${student.firstName} ${student.middleName ?: ""}",
+                    text = "${student.lastName}, ${student.firstName} ${student.middleName ?: ""}".trim(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -187,9 +203,38 @@ fun StudentItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text(
+                    text = "${student.gradeLevel ?: "N/A"} - ${student.sectionName ?: "Unassigned"}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete Student", tint = MaterialTheme.colorScheme.error)
+
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = {
+                            onEdit()
+                            menuExpanded = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            onDelete()
+                            menuExpanded = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
+                    )
+                }
             }
         }
     }
@@ -212,7 +257,7 @@ fun FilterDropdown(
         modifier = modifier
     ) {
         OutlinedTextField(
-            value = selectedValue ?: "",
+            value = selectedValue ?: "All", // Display "All" when nothing is selected
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },

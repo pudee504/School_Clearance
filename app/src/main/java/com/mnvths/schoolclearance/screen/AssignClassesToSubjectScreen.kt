@@ -1,43 +1,16 @@
 package com.mnvths.schoolclearance.screen
 
-import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -48,11 +21,11 @@ import com.mnvths.schoolclearance.viewmodel.AssignmentViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssignClassesToSignatoryScreen(
+fun AssignClassesToSubjectScreen( // ✅ RENAMED function
     navController: NavController,
-    facultyId: Int,
-    signatoryId: Int,
-    signatoryName: String,
+    signatoryId: Int, // ✅ RENAMED parameter (formerly facultyId)
+    subjectId: Int,   // ✅ RENAMED parameter (formerly signatoryId)
+    subjectName: String, // ✅ RENAMED parameter (formerly signatoryName)
     viewModel: AssignmentViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -60,37 +33,26 @@ fun AssignClassesToSignatoryScreen(
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
-    // Sections already assigned in the database
     var assignedSections by remember { mutableStateOf<List<ClassSection>>(emptyList()) }
     var isFetchingAssigned by remember { mutableStateOf(true) }
-
-    // Sections selected by the user (only new selections)
     val selectedSectionIds = remember { mutableStateListOf<Int>() }
 
-
-    // Fetch data once on load
     LaunchedEffect(Unit) {
         viewModel.fetchAllClassSections()
-        viewModel.fetchAssignedSections(facultyId, signatoryId) { existing ->
+        // ✅ Use correct parameters to fetch sections for this specific subject/signatory pair
+        viewModel.fetchAssignedSections(signatoryId, subjectId) { existing ->
             assignedSections = existing
             isFetchingAssigned = false
-            Log.d("AssignClasses", "Initial Assigned Sections: $existing")
         }
-    }
-
-    // Debug state changes
-    LaunchedEffect(assignedSections, sections) {
-        Log.d("AssignClasses", "Assigned Sections: $assignedSections")
-        Log.d("AssignClasses", "All Sections: $sections")
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Assign $signatoryName") },
+                title = { Text("Assign Classes: $subjectName") }, // ✅ Updated title
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -110,11 +72,9 @@ fun AssignClassesToSignatoryScreen(
                 )
 
                 else -> {
-                    // Only show sections not yet assigned
                     val unassignedSections = sections.filter { section ->
                         assignedSections.none { it.sectionId == section.sectionId }
                     }
-                    Log.d("AssignClasses", "Unassigned Sections: $unassignedSections")
 
                     LazyColumn(
                         modifier = Modifier
@@ -160,31 +120,20 @@ fun AssignClassesToSignatoryScreen(
                                 return@Button
                             }
 
-                            // In AssignClassesToSignatoryScreen.kt, inside the Button's onClick lambda
-
-                            viewModel.assignClassesToFaculty(
-                                facultyId = facultyId,
+                            // ✅ Call the updated ViewModel function with correct parameters
+                            // NOTE: You will need to rename this function in your AssignmentViewModel
+                            viewModel.assignClassesToSubject(
                                 signatoryId = signatoryId,
+                                subjectId = subjectId,
                                 sectionIds = selectedSectionIds.toList(),
                                 onSuccess = {
                                     Toast.makeText(context, "Classes assigned successfully!", Toast.LENGTH_SHORT).show()
-                                    // Refetch assigned sections to ensure UI is in sync with server
-                                    viewModel.fetchAssignedSections(facultyId, signatoryId) { updatedSections ->
-                                        // Update the assignedSections state here
-                                        assignedSections = updatedSections
-                                        // Clear the selected sections list
-                                        selectedSectionIds.clear()
-                                        Log.d("AssignClasses", "Updated Assigned Sections: $updatedSections")
-                                        Log.d("AssignClasses", "Selected Section IDs Cleared: $selectedSectionIds")
-                                        // Finally, navigate back
-                                        navController.popBackStack()
-                                    }
+                                    navController.popBackStack()
                                 },
                                 onError = { errorMessage ->
                                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                 }
                             )
-
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -192,7 +141,6 @@ fun AssignClassesToSignatoryScreen(
                     ) {
                         Text("Save Assignments")
                     }
-
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }

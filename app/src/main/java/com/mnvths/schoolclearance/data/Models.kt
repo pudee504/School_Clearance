@@ -6,9 +6,8 @@ import java.util.Calendar
 
 @Serializable
 data class ClearanceItem(
-    // ✅ FIX 1: Use @SerialName to match the key from server.js ("subjectName")
-    @SerialName("subjectName")
-    val signatoryName: String?,
+    @SerialName("subjectName") // This name from the server is now correct
+    val subjectName: String?,
     val schoolYear: String,
     val quarter: Int,
     val isCleared: Boolean
@@ -36,9 +35,9 @@ sealed class LoggedInUser {
     data class FacultyAdminUser(val user: OtherUser) : LoggedInUser()
 }
 
-// NEW data class for a faculty member
+// ✅ RENAMED: FacultyMember is now Signatory (represents a person)
 @Serializable
-data class FacultyMember(
+data class Signatory(
     val id: Int,
     val name: String,
     val firstName: String,
@@ -47,21 +46,25 @@ data class FacultyMember(
     val username: String
 )
 
-// NEW data class for a signatory
+// ✅ RENAMED: Signatory is now Subject (represents a clearance item)
 @Serializable
-data class Signatory(
+data class Subject(
     val id: Int,
-    val signatoryName: String
+    @SerialName("subjectName") // Matches the API response key
+    val name: String
 )
 
-// NEW data class for an assigned signatory
+// ✅ RENAMED: Represents a subject assigned to a signatory
 @Serializable
-data class AssignedSignatory(
-    val signatoryId: Int,
-    val signatoryName: String
+data class AssignedSubject(
+    // NOTE: Your API might still call these signatoryId/Name. @SerialName handles it.
+    // Renaming the Kotlin properties makes the app code easier to understand.
+    @SerialName("signatoryId")
+    val subjectId: Int,
+    @SerialName("signatoryName")
+    val subjectName: String
 )
 
-// NEW data class for a class section
 @Serializable
 data class ClassSection(
     val sectionId: Int,
@@ -69,10 +72,11 @@ data class ClassSection(
     val sectionName: String
 )
 
+// ✅ UPDATED: Now uses the correct property names
 @Serializable
 data class AssignClassesRequest(
-    val facultyId: Int,
     val signatoryId: Int,
+    val subjectId: Int,
     val sectionIds: List<Int>
 )
 
@@ -106,7 +110,7 @@ data class StudentClearanceStatus(
     val isCleared: Boolean
 )
 
-// Data model for the update request
+// ✅ UPDATED: Now uses the correct property name
 @Serializable
 data class UpdateClearanceRequest(
     val userId: Int,
@@ -118,7 +122,6 @@ data class UpdateClearanceRequest(
 @Serializable
 data class AppSettings(
     @SerialName("active_school_year")
-    // ✅ FIX: Replaced Year.now().value with Calendar to support older Android versions
     val activeSchoolYear: String = "${Calendar.getInstance().get(Calendar.YEAR)}-${Calendar.getInstance().get(Calendar.YEAR) + 1}",
     @SerialName("active_quarter_jhs")
     val activeQuarterJhs: String = "1",
@@ -126,10 +129,10 @@ data class AppSettings(
     val activeSemesterShs: String = "1"
 )
 
-
+// ✅ RENAMED: For adding a new subject
 @Serializable
-data class AddSignatoryRequest(
-    val signatoryName: String
+data class AddSubjectRequest(
+    val subjectName: String
 )
 
 @Serializable
@@ -145,6 +148,7 @@ data class StudentListItem(
 
 @Serializable
 data class ClearanceStatusItem(
+    // This was already correct, just confirming
     val signatoryName: String,
     val isCleared: Boolean
 )
@@ -164,7 +168,6 @@ data class AdminStudentProfile(
     val section: String,
     val clearanceStatus: List<ClearanceStatusItem>,
     val activeTerm: ActiveTerm,
-    // Add these fields to use for populating the edit screen
     val sectionId: Int?,
     val firstName: String,
     val middleName: String?,
@@ -175,6 +178,7 @@ data class AdminStudentProfile(
 @Serializable
 data class UpdateSectionRequest(val gradeLevel: String, val sectionName: String)
 
+// ✅ MODIFIED: sectionId is now nullable to allow unassigning a student from a section
 @Serializable
 data class UpdateStudentRequest(
     val studentId: String,
@@ -183,4 +187,11 @@ data class UpdateStudentRequest(
     val lastName: String,
     val password: String?,
     val sectionId: Int?
+)
+
+@Serializable
+data class Account(
+    val id: Int,
+    @SerialName("accountName")
+    val name: String
 )

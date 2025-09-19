@@ -4,7 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -17,11 +17,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
+import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel = viewModel()) {
+fun AddSignatoryScreen(
+    navController: NavController,
+    viewModel: SignatoryViewModel = viewModel() // ✅ FIX: Use the correct ViewModel
+) {
     val context = LocalContext.current
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -34,10 +37,10 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add New Faculty") },
+                title = { Text("Add New Signatory") }, // ✅ FIX: Updated title
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -96,13 +99,12 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
 
             Button(
                 onClick = {
-                    // ✅ More Secure Password Validation Block
                     val passwordError = when {
                         password.length < 8 -> "Password must be at least 8 characters long."
                         !password.any { it.isDigit() } -> "Password must contain at least one number."
                         !password.any { it.isUpperCase() } -> "Password must contain at least one uppercase letter."
                         password.all { it.isLetterOrDigit() } -> "Password must contain at least one special character."
-                        else -> null // No error
+                        else -> null
                     }
 
                     if (passwordError != null) {
@@ -111,7 +113,7 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
                     }
 
                     isAdding = true
-                    viewModel.addFaculty(
+                    viewModel.addSignatory( // ✅ FIX: Call the correct ViewModel function
                         username = username,
                         password = password,
                         firstName = firstName,
@@ -119,7 +121,8 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
                         lastName = lastName,
                         onSuccess = {
                             isAdding = false
-                            Toast.makeText(context, "Faculty user added successfully!", Toast.LENGTH_SHORT).show()
+                            // ✅ FIX: Updated success message
+                            Toast.makeText(context, "Signatory user added successfully!", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         },
                         onError = { errorMsg ->
@@ -134,7 +137,7 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
                 if (isAdding) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
-                    Text("Save Faculty")
+                    Text("Save Signatory") // ✅ FIX: Updated button text
                 }
             }
         }

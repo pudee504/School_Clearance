@@ -32,12 +32,22 @@ class StudentManagementViewModel : ViewModel() {
     val error = MutableStateFlow<String?>(null)
     private val _students = MutableStateFlow<List<StudentListItem>>(emptyList())
     val students: StateFlow<List<StudentListItem>> = _students.asStateFlow()
-    private val _sections = MutableStateFlow<List<ClassSection>>(emptyList())
-    val sections: StateFlow<List<ClassSection>> = _sections.asStateFlow()
+
+    // ✅ RENAMED: from _sections and sections to _classSections and classSections to match the UI
+    private val _classSections = MutableStateFlow<List<ClassSection>>(emptyList())
+    val classSections: StateFlow<List<ClassSection>> = _classSections.asStateFlow()
+
     private val _gradeLevels = MutableStateFlow<List<String>>(emptyList())
     val gradeLevels: StateFlow<List<String>> = _gradeLevels.asStateFlow()
     private val _studentProfile = MutableStateFlow<AdminStudentProfile?>(null)
     val studentProfile: StateFlow<AdminStudentProfile?> = _studentProfile.asStateFlow()
+
+    // ✅ ADDED: init block to automatically load data for the dropdowns
+    init {
+        fetchAllStudents()
+        fetchClassSections()
+        fetchAllGradeLevels()
+    }
 
     // --- Student Management ---
     fun fetchAllStudents() {
@@ -58,18 +68,27 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
+    // ✅ MODIFIED: Added 'sectionId: Int?' to the function signature
     fun addStudent(
-        studentId: String, firstName: String, middleName: String?, lastName: String, password: String,
-        onSuccess: () -> Unit, onError: (String) -> Unit
+        studentId: String,
+        firstName: String,
+        middleName: String?,
+        lastName: String,
+        password: String,
+        sectionId: Int?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
+                // ✅ MODIFIED: Added 'sectionId' to the data being sent to the server
                 val studentData = mapOf(
                     "studentId" to studentId,
                     "firstName" to firstName,
                     "middleName" to middleName,
                     "lastName" to lastName,
-                    "password" to password
+                    "password" to password,
+                    "sectionId" to sectionId
                 )
                 val response: HttpResponse = client.post("http://10.0.2.2:3000/students") {
                     contentType(ContentType.Application.Json)
@@ -107,19 +126,15 @@ class StudentManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             _studentProfile.value = null
-            error.value = null // Good practice to clear old errors first
+            error.value = null
 
             try {
                 val response: HttpResponse = client.get("http://10.0.2.2:3000/api/student-profile/$studentId")
-
                 if (response.status.isSuccess()) {
                     _studentProfile.value = response.body()
                 } else {
-                    // ✅ THIS IS THE MISSING PART
-                    // This block now handles errors like "404 Not Found"
                     error.value = "Could not load student profile. (Error: ${response.status})"
                 }
-
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
             } finally {
@@ -155,11 +170,13 @@ class StudentManagementViewModel : ViewModel() {
     }
 
     // --- Section & Grade Level Management ---
-    fun fetchSections() {
+    // ✅ RENAMED: from fetchSections to fetchClassSections
+    fun fetchClassSections() {
         viewModelScope.launch {
             isLoading.value = true
             try {
-                _sections.value = client.get("http://10.0.2.2:3000/students/class-sections").body()
+                // ✅ UPDATED: The response body is now assigned to the renamed state flow
+                _classSections.value = client.get("http://10.0.2.2:3000/students/class-sections").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
             } finally {
@@ -197,7 +214,7 @@ class StudentManagementViewModel : ViewModel() {
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSections()
+                    fetchClassSections() // Ensures the sections list is updated after adding
                 } else {
                     onError(response.bodyAsText().ifBlank { "Failed to add section." })
                 }
@@ -227,7 +244,7 @@ class StudentManagementViewModel : ViewModel() {
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSections()
+                    fetchClassSections() // Ensures the sections list is updated
                 } else {
                     onError(response.bodyAsText().ifBlank { "Failed to update section." })
                 }
@@ -247,7 +264,7 @@ class StudentManagementViewModel : ViewModel() {
                 val response: HttpResponse = client.delete("http://10.0.2.2:3000/students/sections/$sectionId")
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSections()
+                    fetchClassSections() // Ensures the sections list is updated
                 } else {
                     onError(response.bodyAsText().ifBlank { "Failed to delete section." })
                 }

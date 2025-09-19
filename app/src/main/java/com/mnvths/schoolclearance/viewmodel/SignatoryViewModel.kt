@@ -1,30 +1,28 @@
-// In SignatoryViewModel.kt
 package com.mnvths.schoolclearance.viewmodel
 
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mnvths.schoolclearance.data.AddSignatoryRequest
+import com.mnvths.schoolclearance.data.AssignedSubject
+import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Signatory
 import com.mnvths.schoolclearance.network.KtorClient
-import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-
 
 class SignatoryViewModel : ViewModel() {
     private val client = KtorClient.httpClient
 
-    private val _signatories = mutableStateOf<List<Signatory>>(emptyList())
-    val signatories: State<List<Signatory>> = _signatories
+    private val _signatoryList = mutableStateOf<List<Signatory>>(emptyList())
+    val signatoryList: State<List<Signatory>> = _signatoryList
+
+    private val _assignedSubjects = mutableStateOf<List<AssignedSubject>>(emptyList())
+    val assignedSubjects: State<List<AssignedSubject>> = _assignedSubjects
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -32,38 +30,47 @@ class SignatoryViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
-    init {
-        fetchSignatories()
-    }
+    private val _assignedSections = mutableStateOf<Map<Int, List<ClassSection>>>(emptyMap())
+    val assignedSections: State<Map<Int, List<ClassSection>>> = _assignedSections
 
-    fun fetchSignatories() {
+    fun fetchSignatoryList() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: List<Signatory> = client.get("http://10.0.2.2:3000/signatories").body()
-                // ✅ Sort the list alphabetically by name before updating the state
-                _signatories.value = response.sortedBy { it.signatoryName }
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/signatories")
+                if (response.status.isSuccess()) {
+                    val signatoryData: List<Signatory> = response.body()
+                    _signatoryList.value = signatoryData
+                } else {
+                    val errorBody = response.bodyAsText()
+                    _error.value = "Server error: ${response.status.description}. Details: $errorBody"
+                }
             } catch (e: Exception) {
-                _error.value = "Error: ${e.message}"
+                _error.value = "Network error: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun addSignatory(name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun deleteAssignedSection(
+        signatoryId: Int,
+        subjectId: Int,
+        sectionId: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
-                val response = client.post("http://10.0.2.2:3000/signatories") {
-                    contentType(ContentType.Application.Json)
-                    setBody(AddSignatoryRequest(name))
-                }
+                // NOTE: This endpoint might live in your assignments.js route handler
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty/$signatoryId/signatory/$subjectId/section/$sectionId")
+
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSignatories() // Refresh list
+                    fetchAssignedSections(signatoryId, subjectId)
                 } else {
-                    onError(response.bodyAsText())
+                    onError("Failed to delete assignment: ${response.bodyAsText()}")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
@@ -71,18 +78,96 @@ class SignatoryViewModel : ViewModel() {
         }
     }
 
-    fun updateSignatory(id: Int, name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun fetchAssignedSubjects(signatoryId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                // NOTE: This endpoint name is now potentially confusing and might need to be updated in your backend routes (e.g., /assignments/signatory/:signatoryId/subjects)
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory/$signatoryId")
+                if (response.status.isSuccess()) {
+                    val subjects: List<AssignedSubject> = response.body()
+                    _assignedSubjects.value = subjects
+                    _assignedSections.value = emptyMap()
+                } else {
+                    _error.value = "Failed to load assigned subjects."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun fetchAssignedSections(signatoryId: Int, subjectId: Int) {
         viewModelScope.launch {
             try {
-                val response = client.put("http://10.0.2.2:3000/signatories/$id") {
+                _isLoading.value = true
+                // NOTE: This endpoint name is now potentially confusing
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory-sections/$signatoryId/$subjectId")
+                if (response.status.isSuccess()) {
+                    val sections: List<ClassSection> = response.body()
+                    _assignedSections.value = _assignedSections.value + (subjectId to sections)
+                } else {
+                    // Handle error case
+                }
+            } catch (e: Exception) {
+                // Handle network error
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteAssignedSubject(signatoryId: Int, subjectId: Int) {
+        viewModelScope.launch {
+            try {
+                Log.d("SignatoryViewModel", "Attempting to delete subject $subjectId for signatory $signatoryId")
+                // NOTE: This endpoint name is now potentially confusing
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty-signatory/$signatoryId/$subjectId")
+                if (response.status.isSuccess()) {
+                    fetchAssignedSubjects(signatoryId)
+                } else {
+                    _error.value = "Failed to delete subject assignment."
+                    Log.e("SignatoryViewModel", "Deletion failed: ${response.status.description}")
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+                Log.e("SignatoryViewModel", "Deletion network error: ${e.stackTraceToString()}")
+            }
+        }
+    }
+
+    fun addSignatory(
+        username: String,
+        password: String,
+        firstName: String,
+        middleName: String?,
+        lastName: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.post("http://10.0.2.2:3000/signatories") {
                     contentType(ContentType.Application.Json)
-                    setBody(AddSignatoryRequest(name))
+                    setBody(
+                        mapOf(
+                            "username" to username,
+                            "password" to password,
+                            "firstName" to firstName,
+                            "middleName" to middleName,
+                            "lastName" to lastName
+                        )
+                    )
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSignatories() // Refresh list
+                    fetchSignatoryList()
                 } else {
-                    onError(response.bodyAsText())
+                    val errorBody = response.bodyAsText()
+                    onError("Failed to add signatory: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
@@ -93,13 +178,50 @@ class SignatoryViewModel : ViewModel() {
     fun deleteSignatory(id: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = client.delete("http://10.0.2.2:3000/signatories/$id")
+                val response: HttpResponse = client.delete("http://10.0.2.2:3000/signatories/$id")
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSignatories() // Refresh list
+                    fetchSignatoryList()
                 } else {
-                    val errorBody = response.body<Map<String, String>>()
-                    onError(errorBody["error"] ?: "Failed to delete.")
+                    onError("Failed to delete signatory: ${response.status.description}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+    fun editSignatory(
+        id: Int,
+        username: String,
+        password: String,
+        firstName: String,
+        lastName: String,
+        middleName: String?,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val bodyMap = mutableMapOf<String, String?>(
+                    "username" to username,
+                    "firstName" to firstName,
+                    "lastName" to lastName,
+                    "middleName" to middleName
+                )
+
+                if (password.isNotBlank()) {
+                    bodyMap["password"] = password
+                }
+
+                val response: HttpResponse = client.put("http://10.0.2.2:3000/signatories/${id}") {
+                    contentType(ContentType.Application.Json)
+                    setBody(bodyMap)
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    fetchSignatoryList()
+                } else {
+                    onError("Failed to update signatory: ${response.status.description}")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")

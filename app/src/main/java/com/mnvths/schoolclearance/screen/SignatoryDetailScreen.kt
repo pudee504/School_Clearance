@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,61 +18,55 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.mnvths.schoolclearance.data.AssignedSignatory
+import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.data.ClassSection
-import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
+import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FacultyDetailsScreen(
+fun SignatoryDetailsScreen(
     navController: NavController,
-    facultyId: Int,
-    facultyName: String,
+    signatoryId: Int,
+    signatoryName: String,
     firstName: String,
     lastName: String,
     middleName: String?,
     username: String?,
-    viewModel: FacultyViewModel = viewModel()
+    viewModel: SignatoryViewModel = viewModel()
 ) {
-    val assignedSignatories by viewModel.assignedSignatories
+    val assignedSubjects by viewModel.assignedSubjects
     val assignedSections by viewModel.assignedSections
     val isLoading by viewModel.isLoading
     val error by viewModel.error
     val context = LocalContext.current
 
-    // State for deleting a whole signatory assignment
-    var showDeleteSignatoryDialog by remember { mutableStateOf(false) }
-    var signatoryToDelete by remember { mutableStateOf<AssignedSignatory?>(null) }
+    var showDeleteSubjectDialog by remember { mutableStateOf(false) }
+    var subjectToDelete by remember { mutableStateOf<AssignedSubject?>(null) }
 
-    // State for deleting a single section assignment
     var showDeleteSectionDialog by remember { mutableStateOf(false) }
     var sectionToDelete by remember { mutableStateOf<ClassSection?>(null) }
-    var signatoryOfSection by remember { mutableStateOf<AssignedSignatory?>(null) }
+    var subjectOfSection by remember { mutableStateOf<AssignedSubject?>(null) }
 
+    var expandedSubjectId by remember { mutableStateOf<Int?>(null) }
 
-    var expandedSignatoryId by remember { mutableStateOf<Int?>(null) }
-    val sectionsLoading = remember { mutableStateOf(mapOf<Int, Boolean>()) }
-
-    // Fetches signatories when the screen is first loaded
-    LaunchedEffect(facultyId) {
-        viewModel.fetchAssignedSignatories(facultyId)
+    LaunchedEffect(signatoryId) {
+        viewModel.fetchAssignedSubjects(signatoryId)
     }
 
-    // Refreshes signatories when returning to this screen (e.g., from "Assign Signatory")
     val backStackEntry by navController.currentBackStackEntryAsState()
     LaunchedEffect(backStackEntry) {
-        if (backStackEntry?.destination?.route?.startsWith("facultyDetails") == true) {
-            viewModel.fetchAssignedSignatories(facultyId)
+        if (backStackEntry?.destination?.route?.startsWith("signatoryDetails") == true) {
+            viewModel.fetchAssignedSubjects(signatoryId)
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Details for $facultyName") },
+                title = { Text("Details for $signatoryName") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -84,17 +79,17 @@ fun FacultyDetailsScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            Text(text = "Name: $facultyName", style = MaterialTheme.typography.headlineSmall)
-            Text(text = "ID: $facultyId", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Name: $signatoryName", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "ID: $signatoryId", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(16.dp))
             Button(
-                onClick = { navController.navigate("assignSignatoryToFaculty/$facultyId/$facultyName") },
+                onClick = { navController.navigate("assignSubjectToSignatory/$signatoryId/$signatoryName") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Assign New Signatory")
+                Text("Assign New Subject")
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Assigned Signatories:", style = MaterialTheme.typography.titleLarge)
+            Text(text = "Assigned Subjects:", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
             if (isLoading) {
@@ -108,7 +103,7 @@ fun FacultyDetailsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(assignedSignatories) { signatory ->
+                    items(assignedSubjects) { subject ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
@@ -117,54 +112,54 @@ fun FacultyDetailsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = signatory.signatoryName,
+                                        text = subject.subjectName,
                                         style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.weight(1f)
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { navController.navigate("assignClassesToSignatory/$facultyId/$facultyName/${signatory.signatoryId}/${signatory.signatoryName}") }) {
+                                        IconButton(onClick = { navController.navigate("assignClassesToSubject/$signatoryId/$signatoryName/${subject.subjectId}/${subject.subjectName}") }) {
                                             Icon(Icons.Default.Add, "Assign Class")
                                         }
                                         IconButton(onClick = {
-                                            signatoryToDelete = signatory
-                                            showDeleteSignatoryDialog = true
+                                            subjectToDelete = subject
+                                            showDeleteSubjectDialog = true
                                         }) {
-                                            Icon(Icons.Default.Delete, "Delete Signatory")
+                                            Icon(Icons.Default.Delete, "Delete Subject Assignment")
                                         }
                                         IconButton(onClick = {
-                                            if (expandedSignatoryId == signatory.signatoryId) {
-                                                expandedSignatoryId = null
+                                            if (expandedSubjectId == subject.subjectId) {
+                                                expandedSubjectId = null
                                             } else {
-                                                if (!assignedSections.containsKey(signatory.signatoryId)) {
-                                                    viewModel.fetchAssignedSections(facultyId, signatory.signatoryId)
+                                                if (!assignedSections.containsKey(subject.subjectId)) {
+                                                    viewModel.fetchAssignedSections(signatoryId, subject.subjectId)
                                                 }
-                                                expandedSignatoryId = signatory.signatoryId
+                                                expandedSubjectId = subject.subjectId
                                             }
                                         }) {
-                                            Icon(if (expandedSignatoryId == signatory.signatoryId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, "Expand")
+                                            Icon(if (expandedSubjectId == subject.subjectId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, "Expand")
                                         }
                                     }
                                 }
 
-                                AnimatedVisibility(visible = expandedSignatoryId == signatory.signatoryId) {
-                                    val sectionsForSignatory = assignedSections[signatory.signatoryId]
+                                AnimatedVisibility(visible = expandedSubjectId == subject.subjectId) {
+                                    val sectionsForSubject = assignedSections[subject.subjectId]
                                     when {
-                                        sectionsForSignatory == null -> {
+                                        sectionsForSubject == null -> {
                                             Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
                                                 CircularProgressIndicator()
                                             }
                                         }
-                                        sectionsForSignatory.isEmpty() -> {
+                                        sectionsForSubject.isEmpty() -> {
                                             Text("No classes assigned yet.", modifier = Modifier.padding(top = 8.dp))
                                         }
                                         else -> {
                                             Column(modifier = Modifier.padding(top = 8.dp)) {
-                                                sectionsForSignatory.forEach { section ->
+                                                sectionsForSubject.forEach { section ->
                                                     Row(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .clickable {
-                                                                navController.navigate("clearanceScreen/${section.sectionId}/${signatory.signatoryId}/${section.gradeLevel}/${section.sectionName}/${signatory.signatoryName}")
+                                                                navController.navigate("clearanceScreen/${section.sectionId}/${subject.subjectId}/${section.gradeLevel}/${section.sectionName}/${subject.subjectName}")
                                                             }
                                                             .padding(vertical = 4.dp),
                                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -176,7 +171,7 @@ fun FacultyDetailsScreen(
                                                         )
                                                         IconButton(onClick = {
                                                             sectionToDelete = section
-                                                            signatoryOfSection = signatory // Remember which signatory it belongs to
+                                                            subjectOfSection = subject
                                                             showDeleteSectionDialog = true
                                                         }) {
                                                             Icon(Icons.Default.Delete, contentDescription = "Delete Section Assignment")
@@ -195,44 +190,42 @@ fun FacultyDetailsScreen(
         }
     }
 
-    // Dialog for deleting a whole signatory
-    if (showDeleteSignatoryDialog && signatoryToDelete != null) {
+    if (showDeleteSubjectDialog && subjectToDelete != null) {
         AlertDialog(
-            onDismissRequest = { showDeleteSignatoryDialog = false },
+            onDismissRequest = { showDeleteSubjectDialog = false },
             title = { Text(text = "Confirm Deletion") },
-            text = { Text(text = "Are you sure you want to delete the assignment for ${signatoryToDelete?.signatoryName}? This will un-assign all sections for this subject.") },
+            text = { Text(text = "Are you sure you want to delete the assignment for ${subjectToDelete?.subjectName}? This will un-assign all sections for this subject.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        signatoryToDelete?.let { signatory ->
-                            viewModel.deleteAssignedSignatory(facultyId, signatory.signatoryId)
+                        subjectToDelete?.let { subject ->
+                            viewModel.deleteAssignedSubject(signatoryId, subject.subjectId)
                         }
-                        showDeleteSignatoryDialog = false
+                        showDeleteSubjectDialog = false
                     }
                 ) {
                     Text("Delete")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteSignatoryDialog = false }) {
+                TextButton(onClick = { showDeleteSubjectDialog = false }) {
                     Text("Cancel")
                 }
             }
         )
     }
 
-    // Dialog for deleting a single section assignment
-    if (showDeleteSectionDialog && sectionToDelete != null && signatoryOfSection != null) {
+    if (showDeleteSectionDialog && sectionToDelete != null && subjectOfSection != null) {
         AlertDialog(
             onDismissRequest = { showDeleteSectionDialog = false },
             title = { Text("Confirm Deletion") },
-            text = { Text("Are you sure you want to un-assign section '${sectionToDelete?.sectionName}' from '${signatoryOfSection?.signatoryName}'?") },
+            text = { Text("Are you sure you want to un-assign section '${sectionToDelete?.sectionName}' from '${subjectOfSection?.subjectName}'?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.deleteAssignedSection(
-                            facultyId = facultyId,
-                            signatoryId = signatoryOfSection!!.signatoryId,
+                            signatoryId = signatoryId,
+                            subjectId = subjectOfSection!!.subjectId,
                             sectionId = sectionToDelete!!.sectionId,
                             onSuccess = {
                                 Toast.makeText(context, "Assignment deleted.", Toast.LENGTH_SHORT).show()

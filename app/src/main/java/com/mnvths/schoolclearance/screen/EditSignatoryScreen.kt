@@ -6,9 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -25,27 +24,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
+import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditFacultyScreen(
+fun EditSignatoryScreen( // ✅ RENAMED function
     navController: NavController,
-    facultyId: Int,
-    facultyName: String,
+    signatoryId: Int, // ✅ RENAMED parameter
+    signatoryName: String, // ✅ RENAMED parameter
     firstName: String,
     lastName: String,
     middleName: String?,
-    username: String, // Correctly receive username here
-    viewModel: FacultyViewModel = viewModel()
+    username: String,
+    viewModel: SignatoryViewModel = viewModel() // ✅ Use the correct ViewModel
 ) {
     val context = LocalContext.current
-    var newUsername by remember { mutableStateOf(username) } // Initialize with passed username
-    var newPassword by remember { mutableStateOf("") } // Password is not passed, start with blank
+    var newUsername by remember { mutableStateOf(username) }
+    var newPassword by remember { mutableStateOf("") }
     var newFirstName by remember { mutableStateOf(firstName) }
     var newLastName by remember { mutableStateOf(lastName) }
     var newMiddleName by remember { mutableStateOf(middleName ?: "") }
@@ -53,10 +52,10 @@ fun EditFacultyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit: $facultyName") },
+                title = { Text("Edit: $signatoryName") }, // ✅ Use renamed parameter
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -81,7 +80,7 @@ fun EditFacultyScreen(
                 onValueChange = { newPassword = it },
                 label = { Text("New Password (Leave blank to keep old)") },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                visualTransformation = PasswordVisualTransformation()
             )
             OutlinedTextField(
                 value = newFirstName,
@@ -103,15 +102,16 @@ fun EditFacultyScreen(
             )
             Button(
                 onClick = {
-                    viewModel.editFaculty(
-                        id = facultyId,
+                    viewModel.editSignatory( // ✅ Call the correct ViewModel function
+                        id = signatoryId, // ✅ Use renamed parameter
                         username = newUsername,
                         password = newPassword,
                         firstName = newFirstName,
                         lastName = newLastName,
                         middleName = newMiddleName.ifBlank { null },
                         onSuccess = {
-                            Toast.makeText(context, "Faculty updated successfully!", Toast.LENGTH_SHORT).show()
+                            // ✅ Updated success message
+                            Toast.makeText(context, "Signatory updated successfully!", Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         },
                         onError = { errorMsg ->

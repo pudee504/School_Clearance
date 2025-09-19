@@ -2,7 +2,6 @@ package com.mnvths.schoolclearance.screen
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,11 +26,13 @@ fun SectionManagementScreen(
     navController: NavController,
     viewModel: StudentManagementViewModel = viewModel()
 ) {
+    // ✅ FIXED: Renamed fetchSections() to fetchClassSections()
     LaunchedEffect(Unit) {
-        viewModel.fetchSections()
+        viewModel.fetchClassSections()
     }
 
-    val sections by viewModel.sections.collectAsState()
+    // ✅ FIXED: Renamed viewModel.sections to viewModel.classSections
+    val sections by viewModel.classSections.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 

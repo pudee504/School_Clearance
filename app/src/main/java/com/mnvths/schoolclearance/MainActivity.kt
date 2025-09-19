@@ -36,10 +36,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mnvths.schoolclearance.screen.AdminDashboard
-import com.mnvths.schoolclearance.screen.AssignClassesToSignatoryScreen
-import com.mnvths.schoolclearance.screen.AssignSignatoryToFacultyScreen
-import com.mnvths.schoolclearance.screen.EditFacultyScreen
-import com.mnvths.schoolclearance.screen.FacultyDetailsScreen
+import com.mnvths.schoolclearance.screen.AssignClassesToSubjectScreen
+import com.mnvths.schoolclearance.screen.AssignSubjectToSignatoryScreen
+import com.mnvths.schoolclearance.screen.EditSignatoryScreen
+import com.mnvths.schoolclearance.screen.SignatoryDetailsScreen
 import com.mnvths.schoolclearance.screen.LoginScreen
 import com.mnvths.schoolclearance.screen.StudentDetailScreen
 import com.mnvths.schoolclearance.ui.theme.SchoolClearanceTheme

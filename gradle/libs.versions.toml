@@ -23,6 +23,7 @@ navigationCompose = "2.9.3"
 ui = "1.8.3"
 animation = "1.9.0"
 animationCoreLint = "1.9.0"
+runtime = "1.9.1"
 
 
 
@@ -64,6 +65,7 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 androidx-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 androidx-animation-core-lint = { group = "androidx.compose.animation", name = "animation-core-lint", version.ref = "animationCoreLint" }
+androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 
 
 

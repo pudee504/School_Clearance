@@ -10,7 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mnvths.schoolclearance.data.LoggedInUser
 import com.mnvths.schoolclearance.screen.AdminDashboard
-import com.mnvths.schoolclearance.screen.FacultyDashboard
+import com.mnvths.schoolclearance.screen.SignatoryDashboard
 import com.mnvths.schoolclearance.screen.LoginScreen
 import com.mnvths.schoolclearance.screen.StudentDetailScreen
 import com.mnvths.schoolclearance.viewmodel.AuthViewModel
@@ -64,7 +64,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         composable("facultyDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
-                FacultyDashboard(user = user, onSignOut = {
+                SignatoryDashboard(user = user, onSignOut = {
                     authViewModel.logout()
                     navController.navigate("login") {
                         popUpTo("login") { inclusive = true }

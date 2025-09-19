@@ -20,12 +20,12 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
         startDestination = "students_graph",
         modifier = modifier
     ) {
+        // Students graph (unchanged)
         navigation(
             startDestination = "studentManagement",
             route = "students_graph"
         ) {
             composable("studentManagement") { StudentManagementScreen(navController = navController) }
-
             composable(
                 "adminStudentDetail/{studentId}",
                 arguments = listOf(navArgument("studentId") { type = NavType.StringType })
@@ -35,9 +35,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                     studentId = backStackEntry.arguments?.getString("studentId") ?: ""
                 )
             }
-
             composable("addStudent") { AddStudentScreen(navController = navController) }
-
             composable(
                 "editStudent/{studentId}",
                 arguments = listOf(navArgument("studentId") { type = NavType.StringType })
@@ -49,7 +47,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
             }
         }
 
-        // ✅ NEW GRAPH 2: All screens related to Sections
+        // Sections graph (unchanged)
         navigation(
             startDestination = "sectionManagement",
             route = "sections_graph"
@@ -73,28 +71,28 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
             }
         }
 
-        // ✅ GRAPH 2: All screens related to Faculty
+        // Signatories graph (unchanged)
         navigation(
-            startDestination = "facultyList",
-            route = "faculty_graph"
+            startDestination = "signatoryList",
+            route = "signatories_graph"
         ) {
-            composable("facultyList") { FacultyListScreen(navController = navController) }
-            composable("addFaculty") { AddFacultyScreen(navController = navController) }
+            composable("signatoryList") { SignatoryListScreen(navController = navController) }
+            composable("addSignatory") { AddSignatoryScreen(navController = navController) }
             composable(
-                route = "facultyDetails/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}/{username}",
+                route = "signatoryDetails/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
                 arguments = listOf(
-                    navArgument("facultyId") { type = NavType.IntType },
-                    navArgument("facultyName") { type = NavType.StringType },
+                    navArgument("signatoryId") { type = NavType.IntType },
+                    navArgument("signatoryName") { type = NavType.StringType },
                     navArgument("firstName") { type = NavType.StringType },
                     navArgument("lastName") { type = NavType.StringType },
                     navArgument("middleName") { type = NavType.StringType; nullable = true },
                     navArgument("username") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                FacultyDetailsScreen(
+                SignatoryDetailsScreen(
                     navController = navController,
-                    facultyId = backStackEntry.arguments?.getInt("facultyId") ?: 0,
-                    facultyName = backStackEntry.arguments?.getString("facultyName") ?: "",
+                    signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                    signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
                     firstName = backStackEntry.arguments?.getString("firstName") ?: "",
                     lastName = backStackEntry.arguments?.getString("lastName") ?: "",
                     middleName = backStackEntry.arguments?.getString("middleName"),
@@ -102,20 +100,20 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             }
             composable(
-                route = "editFaculty/{facultyId}/{facultyName}/{firstName}/{lastName}/{middleName}/{username}",
+                route = "editSignatory/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
                 arguments = listOf(
-                    navArgument("facultyId") { type = NavType.IntType },
-                    navArgument("facultyName") { type = NavType.StringType },
+                    navArgument("signatoryId") { type = NavType.IntType },
+                    navArgument("signatoryName") { type = NavType.StringType },
                     navArgument("firstName") { type = NavType.StringType },
                     navArgument("lastName") { type = NavType.StringType },
                     navArgument("middleName") { type = NavType.StringType; nullable = true },
                     navArgument("username") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                EditFacultyScreen(
+                EditSignatoryScreen(
                     navController = navController,
-                    facultyId = backStackEntry.arguments?.getInt("facultyId") ?: 0,
-                    facultyName = backStackEntry.arguments?.getString("facultyName") ?: "",
+                    signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                    signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
                     firstName = backStackEntry.arguments?.getString("firstName") ?: "",
                     lastName = backStackEntry.arguments?.getString("lastName") ?: "",
                     middleName = backStackEntry.arguments?.getString("middleName"),
@@ -123,32 +121,32 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             }
             composable(
-                route = "assignSignatoryToFaculty/{facultyId}/{facultyName}",
+                route = "assignSubjectToSignatory/{signatoryId}/{signatoryName}",
                 arguments = listOf(
-                    navArgument("facultyId") { type = NavType.IntType },
-                    navArgument("facultyName") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                AssignSignatoryToFacultyScreen(
-                    navController = navController,
-                    facultyId = backStackEntry.arguments?.getInt("facultyId") ?: 0,
-                    facultyName = backStackEntry.arguments?.getString("facultyName") ?: ""
-                )
-            }
-            composable(
-                route = "assignClassesToSignatory/{facultyId}/{facultyName}/{signatoryId}/{signatoryName}",
-                arguments = listOf(
-                    navArgument("facultyId") { type = NavType.IntType },
-                    navArgument("facultyName") { type = NavType.StringType },
                     navArgument("signatoryId") { type = NavType.IntType },
                     navArgument("signatoryName") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                AssignClassesToSignatoryScreen(
+                AssignSubjectToSignatoryScreen(
                     navController = navController,
-                    facultyId = backStackEntry.arguments?.getInt("facultyId") ?: 0,
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+                )
+            }
+            composable(
+                route = "assignClassesToSubject/{signatoryId}/{signatoryName}/{subjectId}/{subjectName}",
+                arguments = listOf(
+                    navArgument("signatoryId") { type = NavType.IntType },
+                    navArgument("signatoryName") { type = NavType.StringType },
+                    navArgument("subjectId") { type = NavType.IntType },
+                    navArgument("subjectName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                AssignClassesToSubjectScreen(
+                    navController = navController,
+                    signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                    subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
+                    subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
                 )
             }
             composable(
@@ -172,28 +170,37 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
             }
         }
 
-        // ✅ GRAPH 3: All screens related to Signatories
+        // Subjects graph (unchanged)
         navigation(
-            startDestination = "signatoryList",
-            route = "signatories_graph"
+            startDestination = "subjectList",
+            route = "subjects_graph"
         ) {
-            composable("signatoryList") { SignatoryListScreen(navController = navController) }
-            composable("addEditSignatory") {
-                AddEditSignatoryScreen(navController = navController, signatoryId = null, initialName = null)
+            composable("subjectList") { SubjectListScreen(navController = navController) }
+            composable("addEditSubject") {
+                AddEditSubjectScreen(navController = navController, subjectId = null, initialName = null)
             }
             composable(
-                "addEditSignatory/{signatoryId}/{signatoryName}",
+                "addEditSubject/{subjectId}/{subjectName}",
                 arguments = listOf(
-                    navArgument("signatoryId") { type = NavType.IntType },
-                    navArgument("signatoryName") { type = NavType.StringType }
+                    navArgument("subjectId") { type = NavType.IntType },
+                    navArgument("subjectName") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                AddEditSignatoryScreen(
+                AddEditSubjectScreen(
                     navController = navController,
-                    signatoryId = backStackEntry.arguments?.getInt("signatoryId"),
-                    initialName = backStackEntry.arguments?.getString("signatoryName")
+                    subjectId = backStackEntry.arguments?.getInt("subjectId"),
+                    initialName = backStackEntry.arguments?.getString("subjectName")
                 )
             }
+        }
+
+        // ✅ ADD THIS NEW NAVIGATION GRAPH FOR ACCOUNTS
+        navigation(
+            startDestination = "accountList",
+            route = "accounts_graph"
+        ) {
+            composable("accountList") { AccountListScreen(navController = navController) }
+            // Add routes for "addEditAccount" here later if you need them.
         }
     }
 }

@@ -3,18 +3,18 @@ package com.mnvths.schoolclearance.screen
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -37,7 +37,6 @@ fun StudentListScreen(
     val context = LocalContext.current
     var searchText by remember { mutableStateOf("") }
 
-    // ✅ ADDED BACK: State for the delete confirmation dialog
     var showDeleteDialog by remember { mutableStateOf(false) }
     var studentToDelete by remember { mutableStateOf<StudentListItem?>(null) }
 
@@ -51,7 +50,7 @@ fun StudentListScreen(
         } else {
             studentsInSection.filter { student ->
                 val fullName = "${student.lastName}, ${student.firstName} ${student.middleName ?: ""}"
-                fullName.contains(searchText, ignoreCase = true) || (student.id?.contains(searchText, ignoreCase = true) ?: false)
+                fullName.contains(searchText, ignoreCase = true) || (student.id.contains(searchText, ignoreCase = true))
             }
         }
     }
@@ -62,10 +61,18 @@ fun StudentListScreen(
                 title = { Text("Students in $gradeLevel - $sectionName") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
+        },
+        // ✅ ADDED: Floating Action Button for consistency
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { navController.navigate("addStudent") },
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Add New Student")
+            }
         }
     ) { paddingValues ->
         Column(
@@ -84,15 +91,8 @@ fun StudentListScreen(
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = { navController.navigate("addStudent") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Student")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add New Student")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+
+            // ✅ REMOVED: Old "Add New Student" button from here
 
             if (isLoading && allStudents.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -106,11 +106,14 @@ fun StudentListScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredStudents, key = { it.id }) { student ->
-                        // ✅ MODIFIED: The StudentItem call now includes the onDelete parameter
                         StudentItem(
                             student = student,
                             onClick = {
                                 navController.navigate("adminStudentDetail/${student.id}")
+                            },
+                            // ✅ FIX: Added the missing onEdit parameter to fix the error
+                            onEdit = {
+                                navController.navigate("editStudent/${student.id}")
                             },
                             onDelete = {
                                 studentToDelete = student
@@ -122,7 +125,6 @@ fun StudentListScreen(
             }
         }
 
-        // ✅ ADDED BACK: The logic to show the delete confirmation dialog
         if (showDeleteDialog) {
             DeleteStudentConfirmationDialog(
                 studentName = "${studentToDelete?.firstName} ${studentToDelete?.lastName}",

@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
@@ -25,20 +25,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mnvths.schoolclearance.data.OtherUser
-import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
+import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavController) {
-    // This NavController is for the faculty's internal navigation
-    val facultyNavController = rememberNavController()
+fun SignatoryDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavController) { // ✅ RENAMED
+    val signatoryNavController = rememberNavController()
 
-    NavHost(navController = facultyNavController, startDestination = "faculty_main") {
-        composable("faculty_main") {
-            FacultyMainScreen(
+    // ✅ Use 'signatory_main' for internal routes
+    NavHost(navController = signatoryNavController, startDestination = "signatory_main") {
+        composable("signatory_main") {
+            SignatoryMainScreen( // ✅ RENAMED
                 user = user,
                 onSignOut = onSignOut,
-                navController = facultyNavController
+                navController = signatoryNavController
             )
         }
         composable(
@@ -52,7 +52,7 @@ fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavC
             )
         ) { backStackEntry ->
             ClearanceScreen(
-                navController = facultyNavController,
+                navController = signatoryNavController,
                 sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
                 subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
                 gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
@@ -65,32 +65,28 @@ fun FacultyDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavC
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FacultyMainScreen(
+private fun SignatoryMainScreen( // ✅ RENAMED
     user: OtherUser,
     onSignOut: () -> Unit,
     navController: NavHostController,
-    viewModel: FacultyViewModel = viewModel()
+    viewModel: SignatoryViewModel = viewModel()
 ) {
-    // ✅ FIX: Changed from .collectAsState() to direct delegation 'by'
-    // This now correctly matches the implementation in your other screens.
-    val assignedSignatories by viewModel.assignedSignatories
+    val assignedSubjects by viewModel.assignedSubjects
     val assignedSections by viewModel.assignedSections
     val isLoading by viewModel.isLoading
+    var expandedSubjectId by remember { mutableStateOf<Int?>(null) }
 
-    var expandedSignatoryId by remember { mutableStateOf<Int?>(null) }
-
-    // Fetch the faculty's assigned signatories when the screen loads
     LaunchedEffect(user.id) {
-        viewModel.fetchAssignedSignatories(user.id)
+        viewModel.fetchAssignedSubjects(user.id)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Faculty Dashboard") },
+                title = { Text("Signatory Dashboard") }, // ✅ RENAMED
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Sign Out")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Sign Out")
                     }
                 }
             )
@@ -104,23 +100,23 @@ private fun FacultyMainScreen(
             horizontalAlignment = Alignment.Start
         ) {
             Text(text = "Name: ${user.name}", style = MaterialTheme.typography.headlineSmall)
-            Text(text = "Faculty ID: ${user.id}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "ID: ${user.id}", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "My Assigned Signatories:", style = MaterialTheme.typography.titleLarge)
+            Text(text = "My Assigned Subjects:", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (assignedSignatories.isEmpty()) {
-                Text("You have no signatories assigned to you yet.")
+            } else if (assignedSubjects.isEmpty()) {
+                Text("You have no subjects assigned to you yet.")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(assignedSignatories) { signatory ->
+                    items(assignedSubjects) { subject ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
@@ -128,36 +124,31 @@ private fun FacultyMainScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = signatory.signatoryName,
+                                        text = subject.subjectName,
                                         style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.weight(1f)
                                     )
                                     IconButton(onClick = {
-                                        expandedSignatoryId = if (expandedSignatoryId == signatory.signatoryId) {
+                                        expandedSubjectId = if (expandedSubjectId == subject.subjectId) {
                                             null
                                         } else {
-                                            viewModel.fetchAssignedSections(user.id, signatory.signatoryId)
-                                            signatory.signatoryId
+                                            viewModel.fetchAssignedSections(user.id, subject.subjectId)
+                                            subject.subjectId
                                         }
                                     }) {
                                         Icon(
-                                            if (expandedSignatoryId == signatory.signatoryId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                            if (expandedSubjectId == subject.subjectId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                             contentDescription = "Expand"
                                         )
                                     }
                                 }
-
-                                AnimatedVisibility(visible = expandedSignatoryId == signatory.signatoryId) {
-                                    val sections = assignedSections[signatory.signatoryId]
+                                AnimatedVisibility(visible = expandedSubjectId == subject.subjectId) {
+                                    val sections = assignedSections[subject.subjectId]
                                     when {
-                                        sections == null -> {
-                                            Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                                                CircularProgressIndicator()
-                                            }
+                                        sections == null -> Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator()
                                         }
-                                        sections.isEmpty() -> {
-                                            Text("No sections assigned.", modifier = Modifier.padding(top = 8.dp))
-                                        }
+                                        sections.isEmpty() -> Text("No sections assigned.", modifier = Modifier.padding(top = 8.dp))
                                         else -> {
                                             Column(modifier = Modifier.padding(top = 8.dp)) {
                                                 sections.forEach { section ->
@@ -165,7 +156,7 @@ private fun FacultyMainScreen(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .clickable {
-                                                                navController.navigate("clearanceScreen/${section.sectionId}/${signatory.signatoryId}/${section.gradeLevel}/${section.sectionName}/${signatory.signatoryName}")
+                                                                navController.navigate("clearanceScreen/${section.sectionId}/${subject.subjectId}/${section.gradeLevel}/${section.sectionName}/${subject.subjectName}")
                                                             }
                                                             .padding(vertical = 8.dp, horizontal = 16.dp),
                                                     ) {

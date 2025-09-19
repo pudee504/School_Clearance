@@ -1,7 +1,7 @@
 package com.mnvths.schoolclearance.screen
 
+// ✅ START: Add all of these required imports at the top of your file
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,33 +19,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.data.Signatory
-import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
+import com.mnvths.schoolclearance.data.Subject
+import com.mnvths.schoolclearance.viewmodel.SubjectViewModel
+// ✅ END: Required imports
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignatoryListScreen(
-    viewModel: SignatoryViewModel = viewModel(),
-    navController: NavController
+fun SubjectListScreen(
+    navController: NavController,
+    viewModel: SubjectViewModel = viewModel()
 ) {
-    val signatoryList by viewModel.signatoryList
+    val subjects by viewModel.subjects
     val isLoading by viewModel.isLoading
     val error by viewModel.error
     val context = LocalContext.current
 
     var searchQuery by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var signatoryToDelete by remember { mutableStateOf<Signatory?>(null) }
+    var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
     var isDeleting by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        viewModel.fetchSignatoryList()
+        viewModel.fetchSubjects()
     }
 
-    val filteredSignatoryList = signatoryList.filter {
-        it.name.contains(searchQuery, ignoreCase = true) ||
-                it.firstName.contains(searchQuery, ignoreCase = true) ||
-                it.lastName.contains(searchQuery, ignoreCase = true)
+    val filteredSubjectList = subjects.filter {
+        it.name.contains(searchQuery, ignoreCase = true)
     }
 
     Column(
@@ -54,24 +53,21 @@ fun SignatoryListScreen(
             .padding(16.dp)
     ) {
         Button(
-            onClick = { navController.navigate("addSignatory") },
+            onClick = { navController.navigate("addEditSubject") },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add New Signatory")
+            Icon(Icons.Filled.Add, contentDescription = "Add New Subject")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Add New Signatory")
+            Text("Add New Subject")
         }
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            label = { Text("Search Signatories") },
+            label = { Text("Search Subjects") },
             leadingIcon = {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = "Search"
-                )
+                Icon(Icons.Filled.Search, contentDescription = "Search")
             },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -84,13 +80,11 @@ fun SignatoryListScreen(
             }
         } else if (error != null) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxSize().padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Error: $error\nPlease check your server and network connection.",
+                    text = "Error: $error",
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
@@ -100,44 +94,29 @@ fun SignatoryListScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filteredSignatoryList) { signatory ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
+                items(filteredSubjectList) { subject ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        val middleName = signatory.middleName ?: "null"
-                                        val username = signatory.username ?: "null"
-                                        navController.navigate("signatoryDetails/${signatory.id}/${signatory.name}/${signatory.firstName}/${signatory.lastName}/${middleName}/${username}")
-                                    }
-                            ) {
-                                Text(text = "ID: ${signatory.id}", style = MaterialTheme.typography.bodySmall)
-                                Text(text = signatory.name, style = MaterialTheme.typography.titleLarge)
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-
+                            Text(
+                                text = subject.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.weight(1f)
+                            )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = {
-                                    val middleName = signatory.middleName ?: "null"
-                                    val username = signatory.username ?: "null"
-                                    navController.navigate("editSignatory/${signatory.id}/${signatory.name}/${signatory.firstName}/${signatory.lastName}/${middleName}/${username}")
+                                    navController.navigate("addEditSubject/${subject.id}/${subject.name}")
                                 }) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Edit Signatory")
+                                    Icon(Icons.Filled.Edit, contentDescription = "Edit Subject")
                                 }
                                 IconButton(onClick = {
-                                    signatoryToDelete = signatory
+                                    subjectToDelete = subject
                                     showDeleteDialog = true
                                 }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Delete Signatory", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Filled.Delete, contentDescription = "Delete Subject", tint = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }
@@ -147,32 +126,27 @@ fun SignatoryListScreen(
         }
     }
 
-    if (showDeleteDialog && signatoryToDelete != null) {
+    if (showDeleteDialog && subjectToDelete != null) {
         AlertDialog(
-            onDismissRequest = {
-                showDeleteDialog = false
-                signatoryToDelete = null
-            },
+            onDismissRequest = { showDeleteDialog = false },
             title = { Text(text = "Confirm Deletion") },
-            text = { Text(text = "Are you sure you want to delete ${signatoryToDelete?.name}? This action cannot be undone.") },
+            text = { Text(text = "Are you sure you want to delete '${subjectToDelete?.name}'? This may affect existing assignments.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         isDeleting = true
-                        signatoryToDelete?.let { signatory ->
-                            viewModel.deleteSignatory(
-                                id = signatory.id,
+                        subjectToDelete?.let { subject ->
+                            viewModel.deleteSubject(
+                                id = subject.id,
                                 onSuccess = {
-                                    Toast.makeText(context, "Signatory deleted successfully!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Subject deleted!", Toast.LENGTH_SHORT).show()
                                     isDeleting = false
                                     showDeleteDialog = false
-                                    signatoryToDelete = null
                                 },
-                                onError = { errorMessage ->
-                                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                onError = { errorMsg ->
+                                    Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
                                     isDeleting = false
                                     showDeleteDialog = false
-                                    signatoryToDelete = null
                                 }
                             )
                         }
@@ -187,12 +161,7 @@ fun SignatoryListScreen(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        signatoryToDelete = null
-                    }
-                ) {
+                TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancel")
                 }
             }
