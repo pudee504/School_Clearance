@@ -19,8 +19,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.FacultyMember
-import com.mnvths.schoolclearance.FacultyViewModel
+import com.mnvths.schoolclearance.data.FacultyMember
+import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -5,6 +5,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mnvths.schoolclearance.data.AddSignatoryRequest
+import com.mnvths.schoolclearance.data.Signatory
+import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -16,21 +19,9 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class Signatory(
-    val id: Int,
-    val signatoryName: String
-)
-
-@Serializable
-data class AddSignatoryRequest(
-    val signatoryName: String
-)
 
 class SignatoryViewModel : ViewModel() {
-    private val client = HttpClient(CIO) {
-        install(ContentNegotiation) { json() }
-    }
+    private val client = KtorClient.httpClient
 
     private val _signatories = mutableStateOf<List<Signatory>>(emptyList())
     val signatories: State<List<Signatory>> = _signatories

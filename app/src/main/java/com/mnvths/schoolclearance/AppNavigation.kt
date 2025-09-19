@@ -8,10 +8,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.mnvths.schoolclearance.data.LoggedInUser
 import com.mnvths.schoolclearance.screen.AdminDashboard
 import com.mnvths.schoolclearance.screen.FacultyDashboard
 import com.mnvths.schoolclearance.screen.LoginScreen
 import com.mnvths.schoolclearance.screen.StudentDetailScreen
+import com.mnvths.schoolclearance.viewmodel.AuthViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable

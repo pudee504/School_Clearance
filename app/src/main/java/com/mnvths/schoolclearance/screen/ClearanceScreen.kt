@@ -18,8 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.mnvths.schoolclearance.data.StudentClearanceStatus
 import com.mnvths.schoolclearance.viewmodel.ClearanceViewModel
-import com.mnvths.schoolclearance.viewmodel.StudentClearanceStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

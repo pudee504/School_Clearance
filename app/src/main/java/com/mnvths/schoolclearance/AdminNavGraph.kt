@@ -15,18 +15,46 @@ import com.mnvths.schoolclearance.screen.*
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
-    // The NavHost's start destination is now the route of the first graph
     NavHost(
         navController = navController,
-        startDestination = "students",
+        startDestination = "students_graph",
         modifier = modifier
     ) {
-        // ✅ GRAPH 1: All screens related to Students
         navigation(
             startDestination = "studentManagement",
-            route = "students" // This is the route for the "folder"
+            route = "students_graph"
         ) {
             composable("studentManagement") { StudentManagementScreen(navController = navController) }
+
+            composable(
+                "adminStudentDetail/{studentId}",
+                arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                AdminStudentDetailScreen(
+                    navController = navController,
+                    studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+                )
+            }
+
+            composable("addStudent") { AddStudentScreen(navController = navController) }
+
+            composable(
+                "editStudent/{studentId}",
+                arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                EditStudentScreen(
+                    navController = navController,
+                    studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+                )
+            }
+        }
+
+        // ✅ NEW GRAPH 2: All screens related to Sections
+        navigation(
+            startDestination = "sectionManagement",
+            route = "sections_graph"
+        ) {
+            composable("sectionManagement") { SectionManagementScreen(navController = navController) }
             composable("addSection") { AddSectionScreen(navController = navController) }
             composable(
                 "editSection/{sectionId}/{gradeLevel}/{sectionName}",
@@ -43,49 +71,12 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                     initialSectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
                 )
             }
-            composable(
-                route = "studentList/{sectionId}/{gradeLevel}/{sectionName}",
-                arguments = listOf(
-                    navArgument("sectionId") { type = NavType.IntType },
-                    navArgument("gradeLevel") { type = NavType.StringType },
-                    navArgument("sectionName") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                StudentListScreen(
-                    navController = navController,
-                    sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
-                    gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
-                    sectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
-                )
-            }
-            composable(
-                route = "addStudent/{sectionId}/{sectionName}",
-                arguments = listOf(
-                    navArgument("sectionId") { type = NavType.IntType },
-                    navArgument("sectionName") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                AddStudentScreen(
-                    navController = navController,
-                    sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
-                    sectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
-                )
-            }
-            composable(
-                "editStudent/{studentId}",
-                arguments = listOf(navArgument("studentId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                EditStudentScreen(
-                    navController = navController,
-                    studentId = backStackEntry.arguments?.getString("studentId") ?: ""
-                )
-            }
         }
 
         // ✅ GRAPH 2: All screens related to Faculty
         navigation(
             startDestination = "facultyList",
-            route = "faculty"
+            route = "faculty_graph"
         ) {
             composable("facultyList") { FacultyListScreen(navController = navController) }
             composable("addFaculty") { AddFacultyScreen(navController = navController) }

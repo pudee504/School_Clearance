@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.Signatory
+import com.mnvths.schoolclearance.data.Signatory
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

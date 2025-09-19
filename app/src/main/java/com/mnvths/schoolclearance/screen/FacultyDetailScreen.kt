@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.mnvths.schoolclearance.ClassSection
-import com.mnvths.schoolclearance.AssignedSignatory
-import com.mnvths.schoolclearance.FacultyViewModel
+import com.mnvths.schoolclearance.data.AssignedSignatory
+import com.mnvths.schoolclearance.data.ClassSection
+import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,18 +1,23 @@
 package com.mnvths.schoolclearance.screen
 
-
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.FacultyViewModel
+import com.mnvths.schoolclearance.viewmodel.FacultyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,6 +29,7 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
     var middleName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var isAdding by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -48,14 +54,27 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
                 value = username,
                 onValueChange = { username = it },
                 label = { Text("Username") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(autoCorrect = false)
             )
+
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                trailingIcon = {
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = "Toggle password visibility")
+                    }
+                }
             )
+
             OutlinedTextField(
                 value = firstName,
                 onValueChange = { firstName = it },
@@ -65,7 +84,7 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
             OutlinedTextField(
                 value = middleName,
                 onValueChange = { middleName = it },
-                label = { Text("Middle Name") },
+                label = { Text("Middle Name (Optional)") },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
@@ -77,6 +96,20 @@ fun AddFacultyScreen(navController: NavController, viewModel: FacultyViewModel =
 
             Button(
                 onClick = {
+                    // ✅ More Secure Password Validation Block
+                    val passwordError = when {
+                        password.length < 8 -> "Password must be at least 8 characters long."
+                        !password.any { it.isDigit() } -> "Password must contain at least one number."
+                        !password.any { it.isUpperCase() } -> "Password must contain at least one uppercase letter."
+                        password.all { it.isLetterOrDigit() } -> "Password must contain at least one special character."
+                        else -> null // No error
+                    }
+
+                    if (passwordError != null) {
+                        Toast.makeText(context, passwordError, Toast.LENGTH_LONG).show()
+                        return@Button
+                    }
+
                     isAdding = true
                     viewModel.addFaculty(
                         username = username,

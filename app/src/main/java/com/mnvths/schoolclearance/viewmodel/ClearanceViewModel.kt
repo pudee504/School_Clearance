@@ -5,6 +5,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mnvths.schoolclearance.data.StudentClearanceStatus
+import com.mnvths.schoolclearance.data.UpdateClearanceRequest
+import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -14,32 +17,11 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 
-// Data model for the list items
-@Serializable
-data class StudentClearanceStatus(
-    val userId: Int,
-    val studentId: String,
-    val firstName: String,
-    val middleName: String?,
-    val lastName: String,
-    val isCleared: Boolean
-)
 
-// Data model for the update request
-@Serializable
-data class UpdateClearanceRequest(
-    val userId: Int,
-    val subjectId: Int,
-    val sectionId: Int,
-    val isCleared: Boolean
-)
 
 class ClearanceViewModel : ViewModel() {
-    private val client = HttpClient(CIO) {
-        install(ContentNegotiation) { json() }
-    }
+    private val client = KtorClient.httpClient
 
     private val _students = mutableStateOf<List<StudentClearanceStatus>>(emptyList())
     val students: State<List<StudentClearanceStatus>> = _students

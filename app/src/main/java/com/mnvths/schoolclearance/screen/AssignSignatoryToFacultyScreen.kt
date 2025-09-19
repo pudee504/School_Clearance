@@ -39,7 +39,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.AssignmentViewModel
+import com.mnvths.schoolclearance.viewmodel.AssignmentViewModel
+import kotlin.collections.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
