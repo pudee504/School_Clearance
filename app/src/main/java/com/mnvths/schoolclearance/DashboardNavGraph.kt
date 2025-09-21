@@ -1,3 +1,4 @@
+// RENAME THIS FILE to DashboardNavGraph.kt
 package com.mnvths.schoolclearance
 
 import android.os.Build
@@ -14,46 +15,43 @@ import com.mnvths.schoolclearance.screen.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
+fun DashboardNavGraph(
+    innerNavController: NavHostController,
+    rootNavController: NavHostController,
+    modifier: Modifier = Modifier
+) {
     NavHost(
-        navController = navController,
+        navController = innerNavController, // Use the INNER controller for this NavHost
         startDestination = "students_graph",
         modifier = modifier
     ) {
-        // Students graph (unchanged)
+        // --- Students Graph ---
         navigation(
             startDestination = "studentManagement",
             route = "students_graph"
         ) {
-            composable("studentManagement") { StudentManagementScreen(navController = navController) }
+            composable("studentManagement") {
+                // This screen needs to open fullscreen pages, so it gets the ROOT controller
+                StudentManagementScreen(navController = rootNavController)
+            }
             composable(
                 "adminStudentDetail/{studentId}",
                 arguments = listOf(navArgument("studentId") { type = NavType.StringType })
             ) { backStackEntry ->
                 AdminStudentDetailScreen(
-                    navController = navController,
-                    studentId = backStackEntry.arguments?.getString("studentId") ?: ""
-                )
-            }
-            composable("addStudent") { AddStudentScreen(navController = navController) }
-            composable(
-                "editStudent/{studentId}",
-                arguments = listOf(navArgument("studentId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                EditStudentScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED: Pass innerNavController
                     studentId = backStackEntry.arguments?.getString("studentId") ?: ""
                 )
             }
         }
 
-        // Sections graph (unchanged)
+        // --- Sections Graph ---
         navigation(
             startDestination = "sectionManagement",
             route = "sections_graph"
         ) {
-            composable("sectionManagement") { SectionManagementScreen(navController = navController) }
-            composable("addSection") { AddSectionScreen(navController = navController) }
+            composable("sectionManagement") { SectionManagementScreen(navController = innerNavController) } // ✅ FIXED
+            composable("addSection") { AddSectionScreen(navController = innerNavController) } // ✅ FIXED
             composable(
                 "editSection/{sectionId}/{gradeLevel}/{sectionName}",
                 arguments = listOf(
@@ -63,7 +61,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 EditSectionScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
                     initialGradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
                     initialSectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
@@ -71,13 +69,13 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
             }
         }
 
-        // Signatories graph (unchanged)
+        // --- Signatories Graph ---
         navigation(
             startDestination = "signatoryList",
             route = "signatories_graph"
         ) {
-            composable("signatoryList") { SignatoryListScreen(navController = navController) }
-            composable("addSignatory") { AddSignatoryScreen(navController = navController) }
+            composable("signatoryList") { SignatoryListScreen(navController = innerNavController) } // ✅ FIXED
+            composable("addSignatory") { AddSignatoryScreen(navController = innerNavController) } // ✅ FIXED
             composable(
                 route = "signatoryDetails/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
                 arguments = listOf(
@@ -90,7 +88,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 SignatoryDetailsScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
                     firstName = backStackEntry.arguments?.getString("firstName") ?: "",
@@ -111,7 +109,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 EditSignatoryScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
                     firstName = backStackEntry.arguments?.getString("firstName") ?: "",
@@ -128,7 +126,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 AssignSubjectToSignatoryScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
                 )
@@ -143,7 +141,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 AssignClassesToSubjectScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
                     subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
@@ -160,7 +158,7 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 ClearanceScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
                     subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
                     gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
@@ -170,14 +168,14 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
             }
         }
 
-        // Subjects graph (unchanged)
+        // --- Subjects Graph ---
         navigation(
             startDestination = "subjectList",
             route = "subjects_graph"
         ) {
-            composable("subjectList") { SubjectListScreen(navController = navController) }
+            composable("subjectList") { SubjectListScreen(navController = innerNavController) } // ✅ FIXED
             composable("addEditSubject") {
-                AddEditSubjectScreen(navController = navController, subjectId = null, initialName = null)
+                AddEditSubjectScreen(navController = innerNavController, subjectId = null, initialName = null) // ✅ FIXED
             }
             composable(
                 "addEditSubject/{subjectId}/{subjectName}",
@@ -187,20 +185,19 @@ fun AdminNavGraph(navController: NavHostController, modifier: Modifier = Modifie
                 )
             ) { backStackEntry ->
                 AddEditSubjectScreen(
-                    navController = navController,
+                    navController = innerNavController, // ✅ FIXED
                     subjectId = backStackEntry.arguments?.getInt("subjectId"),
                     initialName = backStackEntry.arguments?.getString("subjectName")
                 )
             }
         }
 
-        // ✅ ADD THIS NEW NAVIGATION GRAPH FOR ACCOUNTS
+        // --- Accounts Graph ---
         navigation(
             startDestination = "accountList",
             route = "accounts_graph"
         ) {
-            composable("accountList") { AccountListScreen(navController = navController) }
-            // Add routes for "addEditAccount" here later if you need them.
+            composable("accountList") { AccountListScreen(navController = innerNavController) } // ✅ FIXED
         }
     }
 }

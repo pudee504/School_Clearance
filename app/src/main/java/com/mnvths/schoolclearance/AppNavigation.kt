@@ -5,14 +5,13 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.mnvths.schoolclearance.data.LoggedInUser
-import com.mnvths.schoolclearance.screen.AdminDashboard
-import com.mnvths.schoolclearance.screen.SignatoryDashboard
-import com.mnvths.schoolclearance.screen.LoginScreen
-import com.mnvths.schoolclearance.screen.StudentDetailScreen
+import com.mnvths.schoolclearance.screen.* // Make sure all your screens are imported
 import com.mnvths.schoolclearance.viewmodel.AuthViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -76,8 +75,9 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         composable("adminDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
-                // ✅ FIX: Removed the navController parameter from the AdminDashboard call.
+                // ✅ MODIFIED: Pass the root NavController to the AdminDashboard
                 AdminDashboard(
+                    rootNavController = navController,
                     user = user,
                     onSignOut = {
                         authViewModel.logout()
@@ -85,6 +85,21 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
                     }
                 )
             }
+        }
+
+        // ✅ ADDED: New top-level, fullscreen destinations
+        composable("addStudent") {
+            AddStudentScreen(navController = navController)
+        }
+
+        composable(
+            route = "editStudent/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            EditStudentScreen(
+                navController = navController,
+                studentId = backStackEntry.arguments?.getString("studentId")!!
+            )
         }
     }
 }

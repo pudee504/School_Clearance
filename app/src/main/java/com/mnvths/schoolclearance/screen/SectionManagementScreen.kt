@@ -1,6 +1,7 @@
 package com.mnvths.schoolclearance.screen
 
 import android.os.Build
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,28 +14,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.ClassSection
-import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
+import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SectionManagementScreen(
     navController: NavController,
-    viewModel: StudentManagementViewModel = viewModel()
+    viewModel: SectionManagementViewModel = viewModel() // <-- Use the new ViewModel
 ) {
-    // ✅ FIXED: Renamed fetchSections() to fetchClassSections()
+    // LaunchedEffect now calls the correct ViewModel's fetch method
     LaunchedEffect(Unit) {
         viewModel.fetchClassSections()
     }
 
-    // ✅ FIXED: Renamed viewModel.sections to viewModel.classSections
     val sections by viewModel.classSections.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val context = LocalContext.current
 
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var sectionToDelete by remember { mutableStateOf<ClassSection?>(null) }
@@ -100,8 +102,12 @@ fun SectionManagementScreen(
                 sectionToDelete?.let {
                     viewModel.deleteSection(
                         sectionId = it.sectionId,
-                        onSuccess = { /* Handle success */ },
-                        onError = { /* Handle error */ }
+                        onSuccess = {
+                            Toast.makeText(context, "Section deleted successfully.", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { errorMessage ->
+                            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                        }
                     )
                 }
                 showDeleteConfirmationDialog = false

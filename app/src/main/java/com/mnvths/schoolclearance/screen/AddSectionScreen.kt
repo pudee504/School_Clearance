@@ -13,13 +13,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
+import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSectionScreen(
     navController: NavController,
-    viewModel: StudentManagementViewModel = viewModel()
+    viewModel: SectionManagementViewModel = viewModel() // <-- Use the new ViewModel
 ) {
     val context = LocalContext.current
     var selectedGradeLevel by remember { mutableStateOf<String?>(null) }
@@ -46,18 +46,15 @@ fun AddSectionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Dropdown Menu for Grade Level
             Box(
                 modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.TopStart)
             ) {
                 OutlinedTextField(
-                    // Format the displayed value here
                     value = selectedGradeLevel?.let { "Grade $it" } ?: "Select Grade Level",
-                    onValueChange = {}, // The value is changed by the dropdown, not direct input
+                    onValueChange = {},
                     label = { Text("Grade Level") },
-                    readOnly = true, // Prevents keyboard from appearing
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
                         IconButton(onClick = { expanded = true }) {
                             Icon(Icons.Filled.ArrowDropDown, contentDescription = "Dropdown")
@@ -91,10 +88,9 @@ fun AddSectionScreen(
 
             Button(
                 onClick = {
-                    // Check if both fields have a valid value
                     if (selectedGradeLevel != null && sectionName.isNotBlank()) {
                         viewModel.addSection(
-                            gradeLevel = selectedGradeLevel!!, // Safe to use !! because of the check
+                            gradeLevel = selectedGradeLevel!!,
                             sectionName = sectionName,
                             onSuccess = {
                                 Toast.makeText(context, "Section added successfully!", Toast.LENGTH_SHORT).show()
@@ -105,7 +101,7 @@ fun AddSectionScreen(
                             }
                         )
                     } else {
-                        Toast.makeText(context, "Please select a grade level and fill in the section name.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Please select a grade level and enter a section name.", Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth()

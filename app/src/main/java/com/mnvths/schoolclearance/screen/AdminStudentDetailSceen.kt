@@ -1,3 +1,4 @@
+// In: com.mnvths.schoolclearance.screen/AdminStudentDetailScreen.kt
 package com.mnvths.schoolclearance.screen
 
 import androidx.compose.foundation.layout.*
@@ -27,18 +28,20 @@ fun AdminStudentDetailScreen(
     studentId: String,
     viewModel: StudentManagementViewModel = viewModel()
 ) {
-    val profile by viewModel.studentProfile.collectAsState()
+    // ✅ CHANGE 1: Observe the new profile state
+    val profile by viewModel.adminStudentProfile.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    // ✅ CHANGE 1: "Listen" for the error state from the ViewModel.
     val error by viewModel.error.collectAsState()
 
     LaunchedEffect(studentId) {
-        viewModel.fetchStudentProfile(studentId)
+        // ✅ CHANGE 2: Call the new fetch function
+        viewModel.fetchAdminStudentProfile(studentId)
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.clearStudentProfile()
+            // ✅ CHANGE 3: Call the new clear function
+            viewModel.clearAdminStudentProfile()
         }
     }
 
@@ -61,12 +64,11 @@ fun AdminStudentDetailScreen(
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            // ✅ CHANGE 2: Updated logic to show the specific error message.
             if (isLoading) {
                 CircularProgressIndicator()
             } else if (error != null) {
                 Text(
-                    text = error!!, // Display the actual error from the ViewModel
+                    text = error!!,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
@@ -105,7 +107,6 @@ fun AdminStudentDetailScreen(
                     }
                 }
             } else {
-                // This is now just a fallback for an unknown state
                 Text("Could not load student profile.")
             }
         }

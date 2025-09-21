@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.ClassSection
+// CHANGE 1: Import the new SectionManagementViewModel
+import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 
 // --- Constants for SHS Tracks and Strands ---
@@ -33,11 +35,11 @@ private val tvlStrands = listOf("ICT", "HE (Home Economics)", "IA (Industrial Ar
 @Composable
 fun AddStudentScreen(
     navController: NavController,
-    viewModel: StudentManagementViewModel = viewModel()
+    // CHANGE 2: Accept both ViewModels and rename for clarity
+    studentViewModel: StudentManagementViewModel = viewModel(),
+    sectionViewModel: SectionManagementViewModel = viewModel()
 ) {
     val context = LocalContext.current
-
-    // --- Basic Student Info State ---
     var studentId by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var middleName by remember { mutableStateOf("") }
@@ -45,25 +47,23 @@ fun AddStudentScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // --- State for Dropdown Data ---
-    // In a real app, these would be fetched from the viewModel
-    val gradeLevels by viewModel.gradeLevels.collectAsState()
-    val allSections by viewModel.classSections.collectAsState()
+    // CHANGE 3: Get section and grade level data from the SectionManagementViewModel
+    val gradeLevels by sectionViewModel.gradeLevels.collectAsState()
+    val allSections by sectionViewModel.classSections.collectAsState()
 
-    // --- State for Dropdown Selections ---
     var selectedGradeLevel by remember { mutableStateOf<String?>(null) }
     var selectedTrack by remember { mutableStateOf<String?>(null) }
     var selectedStrand by remember { mutableStateOf<String?>(null) }
     var selectedSection by remember { mutableStateOf<ClassSection?>(null) }
 
-    // --- State for Dropdown Expansion ---
     var gradeLevelExpanded by remember { mutableStateOf(false) }
     var trackExpanded by remember { mutableStateOf(false) }
     var strandExpanded by remember { mutableStateOf(false) }
     var sectionExpanded by remember { mutableStateOf(false) }
 
-    // --- Derived State for Conditional UI ---
-    val isSeniorHigh = selectedGradeLevel == "11" || selectedGradeLevel == "12"
+    // Check for "Grade11" (no space) to match your exact database data.
+    val isSeniorHigh = selectedGradeLevel == "Grade 11" || selectedGradeLevel == "Grade 12"
+
     val filteredSections = remember(selectedGradeLevel, allSections) {
         if (selectedGradeLevel != null) {
             allSections.filter { it.gradeLevel == selectedGradeLevel }
@@ -72,20 +72,16 @@ fun AddStudentScreen(
         }
     }
 
-    // --- Effect to clear dependent selections when grade level changes ---
     LaunchedEffect(selectedGradeLevel) {
         selectedTrack = null
         selectedStrand = null
         selectedSection = null
     }
 
-    // --- Effect to clear strand when track changes ---
     LaunchedEffect(selectedTrack) {
         selectedStrand = null
     }
 
-
-    // --- UI Layout ---
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -93,7 +89,6 @@ fun AddStudentScreen(
             .navigationBarsPadding()
             .padding(horizontal = 16.dp)
     ) {
-        // --- Top Bar with Back Button ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -108,11 +103,10 @@ fun AddStudentScreen(
                 onClick = { navController.popBackStack() },
                 modifier = Modifier.align(Alignment.CenterStart)
             ) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Filled.Close, contentDescription = "Close")
             }
         }
 
-        // --- Scrollable Content Area ---
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -131,7 +125,6 @@ fun AddStudentScreen(
             OutlinedTextField(value = middleName, onValueChange = { middleName = it }, label = { Text("Middle Name (Optional)") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
 
-            // --- Grade Level Dropdown ---
             ExposedDropdownMenuBox(
                 expanded = gradeLevelExpanded,
                 onExpandedChange = { gradeLevelExpanded = !gradeLevelExpanded }
@@ -142,9 +135,7 @@ fun AddStudentScreen(
                     readOnly = true,
                     label = { Text("Grade Level") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = gradeLevelExpanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor()
+                    modifier = Modifier.fillMaxWidth().menuAnchor()
                 )
                 ExposedDropdownMenu(
                     expanded = gradeLevelExpanded,
@@ -157,9 +148,7 @@ fun AddStudentScreen(
                 }
             }
 
-            // --- Conditional Senior High School (SHS) Dropdowns ---
             if (isSeniorHigh) {
-                // --- Track Dropdown ---
                 ExposedDropdownMenuBox(
                     expanded = trackExpanded,
                     onExpandedChange = { trackExpanded = !trackExpanded }
@@ -182,7 +171,6 @@ fun AddStudentScreen(
                     }
                 }
 
-                // --- Strand Dropdown ---
                 if (selectedTrack != null) {
                     val currentStrands = if (selectedTrack == "Academic") academicStrands else tvlStrands
                     ExposedDropdownMenuBox(
@@ -209,8 +197,6 @@ fun AddStudentScreen(
                 }
             }
 
-
-            // --- Section Dropdown ---
             ExposedDropdownMenuBox(
                 expanded = sectionExpanded,
                 onExpandedChange = { sectionExpanded = !sectionExpanded }
@@ -235,7 +221,6 @@ fun AddStudentScreen(
                 }
             }
 
-            // --- Password Field ---
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -251,51 +236,60 @@ fun AddStudentScreen(
                     }
                 }
             )
-
         }
 
-        // --- Save Button at the bottom ---
-        Button(
-            onClick = {
-                // Password Validation Block
-                val passwordError = when {
-                    password.length < 8 -> "Password must be at least 8 characters long."
-                    !password.any { it.isDigit() } -> "Password must contain at least one number."
-                    !password.any { it.isUpperCase() } -> "Password must contain at least one uppercase letter."
-                    password.all { it.isLetterOrDigit() } -> "Password must contain at least one special character."
-                    else -> null // No error
-                }
-
-                if (passwordError != null) {
-                    Toast.makeText(context, passwordError, Toast.LENGTH_LONG).show()
-                    return@Button
-                }
-
-                if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()) {
-                    viewModel.addStudent(
-                        studentId = studentId,
-                        firstName = firstName,
-                        middleName = middleName.takeIf { it.isNotBlank() },
-                        lastName = lastName,
-                        password = password,
-                        sectionId = selectedSection?.sectionId, // Pass the nullable section ID
-                        onSuccess = {
-                            Toast.makeText(context, "Student created successfully!", Toast.LENGTH_SHORT).show()
-                            navController.popBackStack()
-                        },
-                        onError = { errorMessage ->
-                            Toast.makeText(context, "Error: $errorMessage", Toast.LENGTH_LONG).show()
-                        }
-                    )
-                } else {
-                    Toast.makeText(context, "Please fill all required fields.", Toast.LENGTH_SHORT).show()
-                }
-            },
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
+                .padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Save Student")
+            OutlinedButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cancel")
+            }
+            Button(
+                onClick = {
+                    val passwordError = when {
+                        password.length < 8 -> "Password must be at least 8 characters long."
+                        !password.any { it.isDigit() } -> "Password must contain at least one number."
+                        !password.any { it.isUpperCase() } -> "Password must contain at least one uppercase letter."
+                        password.all { it.isLetterOrDigit() } -> "Password must contain at least one special character."
+                        else -> null
+                    }
+
+                    if (passwordError != null) {
+                        Toast.makeText(context, passwordError, Toast.LENGTH_LONG).show()
+                        return@Button
+                    }
+
+                    if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()) {
+                        // CHANGE 4: Call addStudent on the studentViewModel
+                        studentViewModel.addStudent(
+                            studentId = studentId,
+                            firstName = firstName,
+                            middleName = middleName.takeIf { it.isNotBlank() },
+                            lastName = lastName,
+                            password = password,
+                            sectionId = selectedSection?.sectionId,
+                            onSuccess = {
+                                Toast.makeText(context, "Student created successfully!", Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            },
+                            onError = { errorMessage ->
+                                Toast.makeText(context, "Error: $errorMessage", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } else {
+                        Toast.makeText(context, "Please fill all required fields.", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Save")
+            }
         }
     }
 }

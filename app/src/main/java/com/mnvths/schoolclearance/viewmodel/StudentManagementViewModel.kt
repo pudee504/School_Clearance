@@ -2,11 +2,9 @@ package com.mnvths.schoolclearance.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mnvths.schoolclearance.data.AddSectionRequest
 import com.mnvths.schoolclearance.data.AdminStudentProfile
-import com.mnvths.schoolclearance.data.ClassSection
+import com.mnvths.schoolclearance.data.StudentDetailsForEdit
 import com.mnvths.schoolclearance.data.StudentListItem
-import com.mnvths.schoolclearance.data.UpdateSectionRequest
 import com.mnvths.schoolclearance.data.UpdateStudentRequest
 import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.call.body
@@ -30,29 +28,27 @@ class StudentManagementViewModel : ViewModel() {
 
     val isLoading = MutableStateFlow(false)
     val error = MutableStateFlow<String?>(null)
+
+    // For the main student list screen
     private val _students = MutableStateFlow<List<StudentListItem>>(emptyList())
     val students: StateFlow<List<StudentListItem>> = _students.asStateFlow()
 
-    // ✅ RENAMED: from _sections and sections to _classSections and classSections to match the UI
-    private val _classSections = MutableStateFlow<List<ClassSection>>(emptyList())
-    val classSections: StateFlow<List<ClassSection>> = _classSections.asStateFlow()
+    // For the EditStudentScreen
+    private val _studentDetails = MutableStateFlow<StudentDetailsForEdit?>(null)
+    val studentDetails: StateFlow<StudentDetailsForEdit?> = _studentDetails.asStateFlow()
 
-    private val _gradeLevels = MutableStateFlow<List<String>>(emptyList())
-    val gradeLevels: StateFlow<List<String>> = _gradeLevels.asStateFlow()
-    private val _studentProfile = MutableStateFlow<AdminStudentProfile?>(null)
-    val studentProfile: StateFlow<AdminStudentProfile?> = _studentProfile.asStateFlow()
+    // For the AdminStudentDetailScreen
+    private val _adminStudentProfile = MutableStateFlow<AdminStudentProfile?>(null)
+    val adminStudentProfile: StateFlow<AdminStudentProfile?> = _adminStudentProfile.asStateFlow()
 
-    // ✅ ADDED: init block to automatically load data for the dropdowns
     init {
         fetchAllStudents()
-        fetchClassSections()
-        fetchAllGradeLevels()
     }
 
-    // --- Student Management ---
     fun fetchAllStudents() {
         viewModelScope.launch {
             isLoading.value = true
+            error.value = null
             try {
                 val response: HttpResponse = client.get("http://10.0.2.2:3000/students")
                 if(response.status.isSuccess()) {
@@ -68,7 +64,6 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
-    // ✅ MODIFIED: Added 'sectionId: Int?' to the function signature
     fun addStudent(
         studentId: String,
         firstName: String,
@@ -81,7 +76,6 @@ class StudentManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                // ✅ MODIFIED: Added 'sectionId' to the data being sent to the server
                 val studentData = mapOf(
                     "studentId" to studentId,
                     "firstName" to firstName,
@@ -98,7 +92,9 @@ class StudentManagementViewModel : ViewModel() {
                     onSuccess()
                     fetchAllStudents()
                 } else {
-                    onError(response.bodyAsText().ifBlank { "Failed to add student." })
+                    val errorBody = response.bodyAsText()
+                    val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    onError(errorMessage.ifBlank { "Failed to add student." })
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
@@ -122,16 +118,41 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
-    fun fetchStudentProfile(studentId: String) {
+    fun fetchStudentDetailsForEdit(studentId: String) {
         viewModelScope.launch {
             isLoading.value = true
-            _studentProfile.value = null
+            _studentDetails.value = null
             error.value = null
 
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/api/student-profile/$studentId")
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/students/$studentId")
                 if (response.status.isSuccess()) {
-                    _studentProfile.value = response.body()
+                    _studentDetails.value = response.body()
+                } else {
+                    error.value = "Could not load student details. (Error: ${response.status})"
+                }
+            } catch (e: Exception) {
+                error.value = "Network Error: ${e.message}"
+            } finally {
+                isLoading.value = false
+            }
+        }
+    }
+
+    fun clearStudentDetails() {
+        _studentDetails.value = null
+    }
+
+    fun fetchAdminStudentProfile(studentId: String) {
+        viewModelScope.launch {
+            isLoading.value = true
+            _adminStudentProfile.value = null
+            error.value = null
+
+            try {
+                val response: HttpResponse = client.get("http://10.0.2.2:3000/students/admin-profile/$studentId")
+                if (response.status.isSuccess()) {
+                    _adminStudentProfile.value = response.body()
                 } else {
                     error.value = "Could not load student profile. (Error: ${response.status})"
                 }
@@ -143,8 +164,8 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
-    fun clearStudentProfile() {
-        _studentProfile.value = null
+    fun clearAdminStudentProfile() {
+        _adminStudentProfile.value = null
     }
 
     fun updateStudent(
@@ -161,115 +182,12 @@ class StudentManagementViewModel : ViewModel() {
                     onSuccess()
                     fetchAllStudents()
                 } else {
-                    onError(response.bodyAsText().ifBlank { "Failed to update student." })
+                    val errorBody = response.bodyAsText()
+                    val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    onError(errorMessage.ifBlank { "Failed to update student." })
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
-            }
-        }
-    }
-
-    // --- Section & Grade Level Management ---
-    // ✅ RENAMED: from fetchSections to fetchClassSections
-    fun fetchClassSections() {
-        viewModelScope.launch {
-            isLoading.value = true
-            try {
-                // ✅ UPDATED: The response body is now assigned to the renamed state flow
-                _classSections.value = client.get("http://10.0.2.2:3000/students/class-sections").body()
-            } catch (e: Exception) {
-                error.value = "Network Error: ${e.message}"
-            } finally {
-                isLoading.value = false
-            }
-        }
-    }
-
-    fun fetchAllGradeLevels() {
-        viewModelScope.launch {
-            try {
-                _gradeLevels.value = client.get("http://10.0.2.2:3000/students/grade-levels").body()
-            } catch (e: Exception) {
-                error.value = "Network Error: ${e.message}"
-            }
-        }
-    }
-
-    fun addSection(
-        gradeLevel: String,
-        sectionName: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/students/sections") {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        AddSectionRequest(
-                            gradeLevel = "Grade $gradeLevel",
-                            sectionName = sectionName
-                        )
-                    )
-                }
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                    fetchClassSections() // Ensures the sections list is updated after adding
-                } else {
-                    onError(response.bodyAsText().ifBlank { "Failed to add section." })
-                }
-            } catch (e: Exception) {
-                onError("Network Error: ${e.message}")
-            }
-        }
-    }
-
-    fun updateSection(
-        sectionId: Int,
-        gradeLevel: String,
-        sectionName: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/sections/$sectionId") {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        UpdateSectionRequest(
-                            gradeLevel = gradeLevel,
-                            sectionName = sectionName
-                        )
-                    )
-                }
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                    fetchClassSections() // Ensures the sections list is updated
-                } else {
-                    onError(response.bodyAsText().ifBlank { "Failed to update section." })
-                }
-            } catch (e: Exception) {
-                onError("Network Error: ${e.message}")
-            }
-        }
-    }
-
-    fun deleteSection(
-        sectionId: Int,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/students/sections/$sectionId")
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                    fetchClassSections() // Ensures the sections list is updated
-                } else {
-                    onError(response.bodyAsText().ifBlank { "Failed to delete section." })
-                }
-            } catch (e: Exception) {
-                onError("Network Error: ${e.message}")
             }
         }
     }

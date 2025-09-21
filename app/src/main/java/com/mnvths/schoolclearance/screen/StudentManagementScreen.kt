@@ -17,25 +17,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.StudentListItem
+import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentManagementScreen(
     navController: NavController,
-    studentViewModel: StudentManagementViewModel = viewModel()
+    studentViewModel: StudentManagementViewModel = viewModel(),
+    sectionViewModel: SectionManagementViewModel = viewModel()
 ) {
     LaunchedEffect(Unit) {
         studentViewModel.fetchAllStudents()
-        studentViewModel.fetchAllGradeLevels()
-        // ✅ FIXED: Renamed fetchSections() to fetchClassSections()
-        studentViewModel.fetchClassSections()
+        sectionViewModel.fetchAllGradeLevels()
+        sectionViewModel.fetchClassSections()
     }
 
     val allStudents by studentViewModel.students.collectAsState()
-    val gradeLevels by studentViewModel.gradeLevels.collectAsState()
-    // ✅ FIXED: Renamed viewModel.sections to viewModel.classSections
-    val sections by studentViewModel.classSections.collectAsState()
+    val gradeLevels by sectionViewModel.gradeLevels.collectAsState()
+    val sections by sectionViewModel.classSections.collectAsState()
     val isLoading by studentViewModel.isLoading.collectAsState()
     val error by studentViewModel.error.collectAsState()
 
@@ -53,7 +53,6 @@ fun StudentManagementScreen(
                 fullName.contains(searchQuery.lowercase())
             }
             .filter { student ->
-                // ✅ FIXED: Corrected filtering logic to properly filter by grade
                 selectedGrade == null || student.gradeLevel == selectedGrade
             }
             .filter { student ->
@@ -75,7 +74,7 @@ fun StudentManagementScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp) // Added top padding
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp)
         ) {
             OutlinedTextField(
                 value = searchQuery,
@@ -132,7 +131,6 @@ fun StudentManagementScreen(
                         StudentItem(
                             student = student,
                             onClick = {
-                                // Assuming you have a route for this
                                 // navController.navigate("adminStudentDetail/${student.id}")
                             },
                             onEdit = {
@@ -203,11 +201,6 @@ fun StudentItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "${student.gradeLevel ?: "N/A"} - ${student.sectionName ?: "Unassigned"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
             Box {
@@ -246,6 +239,7 @@ fun FilterDropdown(
     label: String,
     options: List<String>,
     selectedValue: String?,
+    // ✅ CORRECTED: The typo "onValueeChange" is now "onValueChange"
     onValueChange: (String?) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
@@ -257,7 +251,7 @@ fun FilterDropdown(
         modifier = modifier
     ) {
         OutlinedTextField(
-            value = selectedValue ?: "All", // Display "All" when nothing is selected
+            value = selectedValue ?: "All",
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },

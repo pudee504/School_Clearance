@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
+import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,10 +22,9 @@ fun EditSectionScreen(
     sectionId: Int,
     initialGradeLevel: String,
     initialSectionName: String,
-    viewModel: StudentManagementViewModel = viewModel()
+    viewModel: SectionManagementViewModel = viewModel() // <-- Use the new ViewModel
 ) {
     val context = LocalContext.current
-    // State for the selected grade level, initialized with the value passed to the screen
     var selectedGradeLevel by remember { mutableStateOf(initialGradeLevel) }
     var sectionName by remember { mutableStateOf(initialSectionName) }
     var expanded by remember { mutableStateOf(false) }
@@ -35,7 +34,6 @@ fun EditSectionScreen(
             TopAppBar(
                 title = { Text("Edit Section") },
                 navigationIcon = {
-                    // Added a back button for better navigation
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -51,7 +49,6 @@ fun EditSectionScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- REPLACED TEXT FIELD WITH DROPDOWN MENU ---
             Box(
                 modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.TopStart)
             ) {
@@ -101,7 +98,6 @@ fun EditSectionScreen(
                             sectionName = sectionName,
                             onSuccess = {
                                 Toast.makeText(context, "Section updated successfully!", Toast.LENGTH_SHORT).show()
-                                // Navigate back after successful update
                                 navController.popBackStack()
                             },
                             onError = { error ->

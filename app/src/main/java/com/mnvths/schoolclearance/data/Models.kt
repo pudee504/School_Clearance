@@ -195,3 +195,13 @@ data class Account(
     @SerialName("accountName")
     val name: String
 )
+
+@Serializable
+data class StudentDetailsForEdit(
+    val studentId: String,
+    val firstName: String,
+    val middleName: String?,
+    val lastName: String,
+    val sectionId: Int?,
+    val gradeLevel: String?
+)

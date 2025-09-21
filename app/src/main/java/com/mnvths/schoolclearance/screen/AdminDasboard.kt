@@ -13,7 +13,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.ReceiptLong // ✅ ADD THIS IMPORT
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SupervisorAccount
 import androidx.compose.material3.*
@@ -28,9 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.mnvths.schoolclearance.AdminNavGraph
+import com.mnvths.schoolclearance.DashboardNavGraph // ✅ CHANGED
 import com.mnvths.schoolclearance.R
 import com.mnvths.schoolclearance.data.AppSettings
 import com.mnvths.schoolclearance.data.OtherUser
@@ -48,11 +49,12 @@ private data class AdminScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboard(
+    rootNavController: NavHostController, // ✅ ADDED
     user: OtherUser,
     onSignOut: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    val adminNavController = rememberNavController()
+    val innerNavController = rememberNavController() // This is ONLY for the bottom tabs
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -64,7 +66,6 @@ fun AdminDashboard(
         AdminScreen(route = "sections_graph", title = "Sections", icon = Icons.Filled.Groups),
         AdminScreen(route = "signatories_graph", title = "Signatories", icon = Icons.Filled.SupervisorAccount),
         AdminScreen(route = "subjects_graph", title = "Subjects", icon = Icons.Filled.Book),
-        // ✅ ADD THIS NEW LINE FOR THE ACCOUNTS TAB
         AdminScreen(route = "accounts_graph", title = "Accounts", icon = Icons.Filled.ReceiptLong)
     )
 
@@ -100,7 +101,7 @@ fun AdminDashboard(
             },
             bottomBar = {
                 NavigationBar {
-                    val navBackStackEntry by adminNavController.currentBackStackEntryAsState()
+                    val navBackStackEntry by innerNavController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
 
                     screens.forEach { screen ->
@@ -109,8 +110,8 @@ fun AdminDashboard(
                             label = { Text(screen.title) },
                             selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                             onClick = {
-                                adminNavController.navigate(screen.route) {
-                                    popUpTo(adminNavController.graph.findStartDestination().id) {
+                                innerNavController.navigate(screen.route) {
+                                    popUpTo(innerNavController.graph.findStartDestination().id) {
                                         saveState = true
                                     }
                                     launchSingleTop = true
@@ -123,7 +124,11 @@ fun AdminDashboard(
             }
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
-                AdminNavGraph(navController = adminNavController)
+                // ✅ CHANGED: Use the new graph and pass BOTH controllers
+                DashboardNavGraph(
+                    innerNavController = innerNavController,
+                    rootNavController = rootNavController
+                )
             }
         }
     }
@@ -142,6 +147,7 @@ fun AdminDashboard(
         )
     }
 }
+
 
 @Composable
 fun AdminDrawerContent(
@@ -168,7 +174,7 @@ fun AdminDrawerContent(
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = user.name ?: "Administrator",
+                text = user.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
