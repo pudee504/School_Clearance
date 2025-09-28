@@ -1,5 +1,6 @@
 package com.mnvths.schoolclearance.screen
 
+// STEP 1: ADD ALL OF THESE IMPORTS
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,7 +11,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -20,24 +27,15 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.data.ClassSection
-// CHANGE 1: Import the new SectionManagementViewModel
-import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
+import com.mnvths.schoolclearance.data.*
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
-
-// --- Constants for SHS Tracks and Strands ---
-private val tracks = listOf("Academic", "TVL (Technical-Vocational-Livelihood)")
-private val academicStrands = listOf("STEM", "ABM", "HUMSS", "GAS")
-private val tvlStrands = listOf("ICT", "HE (Home Economics)", "IA (Industrial Arts)")
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddStudentScreen(
     navController: NavController,
-    // CHANGE 2: Accept both ViewModels and rename for clarity
-    studentViewModel: StudentManagementViewModel = viewModel(),
-    sectionViewModel: SectionManagementViewModel = viewModel()
+    viewModel: StudentManagementViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var studentId by remember { mutableStateOf("") }
@@ -47,39 +45,61 @@ fun AddStudentScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // CHANGE 3: Get section and grade level data from the SectionManagementViewModel
-    val gradeLevels by sectionViewModel.gradeLevels.collectAsState()
-    val allSections by sectionViewModel.classSections.collectAsState()
+    // Data from ViewModel
+    val gradeLevels by viewModel.gradeLevels.collectAsState()
+    val allSections by viewModel.classSections.collectAsState()
+    val shsTracks by viewModel.shsTracks.collectAsState()
+    val shsStrands by viewModel.shsStrands.collectAsState()
+    val specializations by viewModel.specializations.collectAsState()
 
-    var selectedGradeLevel by remember { mutableStateOf<String?>(null) }
-    var selectedTrack by remember { mutableStateOf<String?>(null) }
-    var selectedStrand by remember { mutableStateOf<String?>(null) }
+    // State for selections
+    var selectedGrade by remember { mutableStateOf<GradeLevelItem?>(null) }
+    var selectedTrack by remember { mutableStateOf<ShsTrack?>(null) }
+    var selectedStrand by remember { mutableStateOf<ShsStrand?>(null) }
+    var selectedSpecialization by remember { mutableStateOf<Specialization?>(null) }
     var selectedSection by remember { mutableStateOf<ClassSection?>(null) }
 
+    // State for dropdown expansion
     var gradeLevelExpanded by remember { mutableStateOf(false) }
     var trackExpanded by remember { mutableStateOf(false) }
     var strandExpanded by remember { mutableStateOf(false) }
+    var specializationExpanded by remember { mutableStateOf(false) }
+    // STEP 2: TYPO FIX HERE
     var sectionExpanded by remember { mutableStateOf(false) }
 
-    // Check for "Grade11" (no space) to match your exact database data.
-    val isSeniorHigh = selectedGradeLevel == "Grade 11" || selectedGradeLevel == "Grade 12"
+    // Derived state to control UI visibility
+    val gradeName = selectedGrade?.name
+    val isJhsWithSpecialization = gradeName in listOf("Grade 8", "Grade 9", "Grade 10")
+    val isSeniorHigh = gradeName in listOf("Grade 11", "Grade 12")
 
-    val filteredSections = remember(selectedGradeLevel, allSections) {
-        if (selectedGradeLevel != null) {
-            allSections.filter { it.gradeLevel == selectedGradeLevel }
+    val filteredStrands = remember(selectedTrack, shsStrands) {
+        shsStrands.filter { it.trackId == selectedTrack?.id }
+    }
+    val filteredSections = remember(gradeName, allSections) {
+        allSections.filter { it.gradeLevel == gradeName }
+    }
+
+    // Fetch specializations when grade or strand changes
+    LaunchedEffect(selectedGrade) {
+        selectedTrack = null
+        selectedStrand = null
+        selectedSpecialization = null
+        selectedSection = null
+
+        if (isJhsWithSpecialization) {
+            viewModel.fetchSpecializations(gradeLevelId = selectedGrade?.id)
         } else {
-            emptyList()
+            viewModel.clearSpecializations()
         }
     }
 
-    LaunchedEffect(selectedGradeLevel) {
-        selectedTrack = null
-        selectedStrand = null
-        selectedSection = null
-    }
-
-    LaunchedEffect(selectedTrack) {
-        selectedStrand = null
+    LaunchedEffect(selectedStrand) {
+        selectedSpecialization = null
+        if (selectedStrand != null) {
+            viewModel.fetchSpecializations(strandId = selectedStrand?.id)
+        } else if (isSeniorHigh) {
+            viewModel.clearSpecializations()
+        }
     }
 
     Column(
@@ -90,19 +110,10 @@ fun AddStudentScreen(
             .padding(horizontal = 16.dp)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
         ) {
-            Text(
-                text = "Create New Student",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.Center)
-            )
-            IconButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
+            Text(text = "Create New Student", style = MaterialTheme.typography.titleLarge, modifier = Modifier.align(Alignment.Center))
+            IconButton(onClick = { navController.popBackStack() }, modifier = Modifier.align(Alignment.CenterStart)) {
                 Icon(Icons.Filled.Close, contentDescription = "Close")
             }
         }
@@ -113,107 +124,121 @@ fun AddStudentScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
-                value = studentId,
-                onValueChange = { studentId = it },
-                label = { Text("Student ID (LRN)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
+            OutlinedTextField(value = studentId, onValueChange = { studentId = it }, label = { Text("Student ID (LRN)") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("First Name") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = middleName, onValueChange = { middleName = it }, label = { Text("Middle Name (Optional)") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
 
-            ExposedDropdownMenuBox(
-                expanded = gradeLevelExpanded,
-                onExpandedChange = { gradeLevelExpanded = !gradeLevelExpanded }
-            ) {
+            // Grade Level Dropdown
+            ExposedDropdownMenuBox(expanded = gradeLevelExpanded, onExpandedChange = { gradeLevelExpanded = !gradeLevelExpanded }) {
                 OutlinedTextField(
-                    value = selectedGradeLevel ?: "None",
+                    value = selectedGrade?.name ?: "None",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Grade Level") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = gradeLevelExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
                 )
-                ExposedDropdownMenu(
-                    expanded = gradeLevelExpanded,
-                    onDismissRequest = { gradeLevelExpanded = false }
-                ) {
-                    DropdownMenuItem(text = { Text("None") }, onClick = { selectedGradeLevel = null; gradeLevelExpanded = false })
+                ExposedDropdownMenu(expanded = gradeLevelExpanded, onDismissRequest = { gradeLevelExpanded = false }) {
+                    DropdownMenuItem(text = { Text("None") }, onClick = { selectedGrade = null; gradeLevelExpanded = false })
                     gradeLevels.forEach { grade ->
-                        DropdownMenuItem(text = { Text(grade) }, onClick = { selectedGradeLevel = grade; gradeLevelExpanded = false })
+                        DropdownMenuItem(text = { Text(grade.name) }, onClick = { selectedGrade = grade; gradeLevelExpanded = false })
                     }
                 }
             }
 
-            if (isSeniorHigh) {
-                ExposedDropdownMenuBox(
-                    expanded = trackExpanded,
-                    onExpandedChange = { trackExpanded = !trackExpanded }
-                ) {
+            // JHS Specialization Dropdown
+            if (isJhsWithSpecialization) {
+                ExposedDropdownMenuBox(expanded = specializationExpanded, onExpandedChange = { specializationExpanded = !specializationExpanded }) {
                     OutlinedTextField(
-                        value = selectedTrack ?: "Select a Track",
+                        value = selectedSpecialization?.name ?: "Select TVE Specialization",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("TVE Specialization") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    )
+                    ExposedDropdownMenu(expanded = specializationExpanded, onDismissRequest = { specializationExpanded = false }) {
+                        specializations.forEach { spec ->
+                            DropdownMenuItem(text = { Text(spec.name) }, onClick = { selectedSpecialization = spec; specializationExpanded = false })
+                        }
+                    }
+                }
+            }
+
+            // SHS Dropdowns
+            if (isSeniorHigh) {
+                ExposedDropdownMenuBox(expanded = trackExpanded, onExpandedChange = { trackExpanded = !trackExpanded }) {
+                    OutlinedTextField(
+                        value = selectedTrack?.trackName ?: "Select Track",
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Track") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trackExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
-                    ExposedDropdownMenu(
-                        expanded = trackExpanded,
-                        onDismissRequest = { trackExpanded = false }
-                    ) {
-                        tracks.forEach { track ->
-                            DropdownMenuItem(text = { Text(track) }, onClick = { selectedTrack = track; trackExpanded = false })
+                    ExposedDropdownMenu(expanded = trackExpanded, onDismissRequest = { trackExpanded = false }) {
+                        shsTracks.forEach { track ->
+                            DropdownMenuItem(
+                                text = { Text(track.trackName) },
+                                onClick = {
+                                    selectedTrack = track
+                                    selectedStrand = null // Reset strand when track changes
+                                    trackExpanded = false
+                                }
+                            )
                         }
                     }
                 }
-
                 if (selectedTrack != null) {
-                    val currentStrands = if (selectedTrack == "Academic") academicStrands else tvlStrands
-                    ExposedDropdownMenuBox(
-                        expanded = strandExpanded,
-                        onExpandedChange = { strandExpanded = !strandExpanded }
-                    ) {
+                    ExposedDropdownMenuBox(expanded = strandExpanded, onExpandedChange = { strandExpanded = !strandExpanded }) {
                         OutlinedTextField(
-                            value = selectedStrand ?: "Select a Strand",
+                            value = selectedStrand?.strandName ?: "Select Strand",
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Strand") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = strandExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            enabled = filteredStrands.isNotEmpty()
                         )
-                        ExposedDropdownMenu(
-                            expanded = strandExpanded,
-                            onDismissRequest = { strandExpanded = false }
-                        ) {
-                            currentStrands.forEach { strand ->
-                                DropdownMenuItem(text = { Text(strand) }, onClick = { selectedStrand = strand; strandExpanded = false })
+                        ExposedDropdownMenu(expanded = strandExpanded, onDismissRequest = { strandExpanded = false }) {
+                            filteredStrands.forEach { strand ->
+                                DropdownMenuItem(text = { Text(strand.strandName) }, onClick = { selectedStrand = strand; strandExpanded = false })
+                            }
+                        }
+                    }
+                }
+                if (selectedStrand != null) {
+                    ExposedDropdownMenuBox(expanded = specializationExpanded, onExpandedChange = { specializationExpanded = !specializationExpanded }) {
+                        OutlinedTextField(
+                            value = selectedSpecialization?.name ?: "Select Specialization/Major",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Specialization / Major") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            enabled = specializations.isNotEmpty()
+                        )
+                        ExposedDropdownMenu(expanded = specializationExpanded, onDismissRequest = { specializationExpanded = false }) {
+                            specializations.forEach { spec ->
+                                DropdownMenuItem(text = { Text(spec.name) }, onClick = { selectedSpecialization = spec; specializationExpanded = false })
                             }
                         }
                     }
                 }
             }
 
-            ExposedDropdownMenuBox(
-                expanded = sectionExpanded,
-                onExpandedChange = { sectionExpanded = !sectionExpanded }
-            ) {
+            ExposedDropdownMenuBox(expanded = sectionExpanded, onExpandedChange = { sectionExpanded = !sectionExpanded }) {
                 OutlinedTextField(
                     value = selectedSection?.sectionName ?: "None",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Section") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sectionExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    enabled = selectedGradeLevel != null
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                    enabled = selectedGrade != null
                 )
-                ExposedDropdownMenu(
-                    expanded = sectionExpanded,
-                    onDismissRequest = { sectionExpanded = false }
-                ) {
+                ExposedDropdownMenu(expanded = sectionExpanded, onDismissRequest = { sectionExpanded = false }) {
                     DropdownMenuItem(text = { Text("None") }, onClick = { selectedSection = null; sectionExpanded = false })
                     filteredSections.forEach { section ->
                         DropdownMenuItem(text = { Text(section.sectionName) }, onClick = { selectedSection = section; sectionExpanded = false })
@@ -226,7 +251,6 @@ fun AddStudentScreen(
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
@@ -239,9 +263,7 @@ fun AddStudentScreen(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedButton(
@@ -259,21 +281,20 @@ fun AddStudentScreen(
                         password.all { it.isLetterOrDigit() } -> "Password must contain at least one special character."
                         else -> null
                     }
-
                     if (passwordError != null) {
                         Toast.makeText(context, passwordError, Toast.LENGTH_LONG).show()
                         return@Button
                     }
-
                     if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()) {
-                        // CHANGE 4: Call addStudent on the studentViewModel
-                        studentViewModel.addStudent(
+                        viewModel.addStudent(
                             studentId = studentId,
                             firstName = firstName,
                             middleName = middleName.takeIf { it.isNotBlank() },
                             lastName = lastName,
                             password = password,
                             sectionId = selectedSection?.sectionId,
+                            strandId = selectedStrand?.id,
+                            specializationId = selectedSpecialization?.id,
                             onSuccess = {
                                 Toast.makeText(context, "Student created successfully!", Toast.LENGTH_SHORT).show()
                                 navController.popBackStack()

@@ -6,7 +6,7 @@ import java.util.Calendar
 
 @Serializable
 data class ClearanceItem(
-    @SerialName("subjectName") // This name from the server is now correct
+    @SerialName("subjectName")
     val subjectName: String?,
     val schoolYear: String,
     val quarter: Int,
@@ -35,7 +35,6 @@ sealed class LoggedInUser {
     data class FacultyAdminUser(val user: OtherUser) : LoggedInUser()
 }
 
-// ✅ RENAMED: FacultyMember is now Signatory (represents a person)
 @Serializable
 data class Signatory(
     val id: Int,
@@ -46,19 +45,15 @@ data class Signatory(
     val username: String
 )
 
-// ✅ RENAMED: Signatory is now Subject (represents a clearance item)
 @Serializable
 data class Subject(
     val id: Int,
-    @SerialName("subjectName") // Matches the API response key
+    @SerialName("subjectName")
     val name: String
 )
 
-// ✅ RENAMED: Represents a subject assigned to a signatory
 @Serializable
 data class AssignedSubject(
-    // NOTE: Your API might still call these signatoryId/Name. @SerialName handles it.
-    // Renaming the Kotlin properties makes the app code easier to understand.
     @SerialName("signatoryId")
     val subjectId: Int,
     @SerialName("signatoryName")
@@ -72,7 +67,6 @@ data class ClassSection(
     val sectionName: String
 )
 
-// ✅ UPDATED: Now uses the correct property names
 @Serializable
 data class AssignClassesRequest(
     val signatoryId: Int,
@@ -83,15 +77,6 @@ data class AssignClassesRequest(
 @Serializable
 data class AddSectionRequest(val gradeLevel: String, val sectionName: String)
 
-
-@Serializable
-data class AddStudentRequest(
-    val studentId: String,
-    val firstName: String,
-    val middleName: String?,
-    val lastName: String,
-    val sectionId: Int
-)
 
 @Serializable
 data class AssignedSection(
@@ -110,7 +95,6 @@ data class StudentClearanceStatus(
     val isCleared: Boolean
 )
 
-// ✅ UPDATED: Now uses the correct property name
 @Serializable
 data class UpdateClearanceRequest(
     val userId: Int,
@@ -129,7 +113,6 @@ data class AppSettings(
     val activeSemesterShs: String = "1"
 )
 
-// ✅ RENAMED: For adding a new subject
 @Serializable
 data class AddSubjectRequest(
     val subjectName: String
@@ -148,7 +131,6 @@ data class StudentListItem(
 
 @Serializable
 data class ClearanceStatusItem(
-    // This was already correct, just confirming
     val signatoryName: String,
     val isCleared: Boolean
 )
@@ -164,8 +146,8 @@ data class ActiveTerm(
 data class AdminStudentProfile(
     val id: String,
     val name: String,
-    val gradeLevel: String,
-    val section: String,
+    val gradeLevel: String?,
+    val section: String?,
     val clearanceStatus: List<ClearanceStatusItem>,
     val activeTerm: ActiveTerm,
     val sectionId: Int?,
@@ -178,7 +160,6 @@ data class AdminStudentProfile(
 @Serializable
 data class UpdateSectionRequest(val gradeLevel: String, val sectionName: String)
 
-// ✅ MODIFIED: sectionId is now nullable to allow unassigning a student from a section
 @Serializable
 data class UpdateStudentRequest(
     val studentId: String,
@@ -186,7 +167,10 @@ data class UpdateStudentRequest(
     val middleName: String?,
     val lastName: String,
     val password: String?,
-    val sectionId: Int?
+    val sectionId: Int?,
+    val strandId: Int?,
+    // ✅ ADDED: specializationId for updating student's enrollment
+    val specializationId: Int?
 )
 
 @Serializable
@@ -203,5 +187,50 @@ data class StudentDetailsForEdit(
     val middleName: String?,
     val lastName: String,
     val sectionId: Int?,
-    val gradeLevel: String?
+    val gradeLevel: String?,
+    val strandId: Int?,
+    // ✅ ADDED: Include current specialization to pre-select in dropdown
+    val specializationId: Int?
+)
+
+@Serializable
+data class GradeLevelItem(
+    val id: Int,
+    val name: String
+)
+
+@Serializable
+data class ShsTrack(
+    val id: Int,
+    @SerialName("track_name")
+    val trackName: String
+)
+
+@Serializable
+data class ShsStrand(
+    val id: Int,
+    @SerialName("strand_name")
+    val strandName: String,
+    @SerialName("track_id")
+    val trackId: Int
+)
+
+@Serializable
+data class Specialization(
+    val id: Int,
+    @SerialName("subject_name")
+    val name: String
+)
+
+// Add this new data class to your models.kt file
+@Serializable
+data class CreateStudentRequest(
+    val studentId: String,
+    val firstName: String,
+    val middleName: String?,
+    val lastName: String,
+    val password: String,
+    val sectionId: Int?,
+    val strandId: Int?,
+    val specializationId: Int?
 )
