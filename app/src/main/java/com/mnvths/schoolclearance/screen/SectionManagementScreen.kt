@@ -3,35 +3,41 @@ package com.mnvths.schoolclearance.screen
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.viewmodel.SectionManagementViewModel
+// ✅ ADD THIS IMPORT for the refresh logic
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SectionManagementScreen(
-    navController: NavController,
-    viewModel: SectionManagementViewModel = viewModel() // <-- Use the new ViewModel
+    // ✅ MODIFIED: Now accepts the root NavController for full-screen navigation
+    rootNavController: NavController,
+    viewModel: SectionManagementViewModel = viewModel()
 ) {
-    // LaunchedEffect now calls the correct ViewModel's fetch method
-    LaunchedEffect(Unit) {
+    // ✅ START: This block fixes the disappearing sections bug by refreshing the data
+    val navBackStackEntry by rootNavController.currentBackStackEntryAsState()
+    LaunchedEffect(navBackStackEntry) {
+        // When we return to this screen, the back stack changes, triggering this refresh
         viewModel.fetchClassSections()
     }
+    // ✅ END: Refresh logic
 
     val sections by viewModel.classSections.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -41,55 +47,95 @@ fun SectionManagementScreen(
     var showDeleteConfirmationDialog by remember { mutableStateOf(false) }
     var sectionToDelete by remember { mutableStateOf<ClassSection?>(null) }
 
-    val sortedSections = remember(sections) {
-        sections.sortedWith(
-            compareBy(
-                { it.gradeLevel.filter { char -> char.isDigit() }.toIntOrNull() ?: 0 },
-                { it.sectionName }
-            )
-        )
+    var expandedGradeLevel by remember { mutableStateOf<String?>(null) }
+
+    val groupedSections = remember(sections) {
+        sections.groupBy { it.gradeLevel }
+            .toSortedMap(compareBy { it.filter { char -> char.isDigit() }.toIntOrNull() ?: 0 })
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Button(
-            onClick = { navController.navigate("addSection") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add Section")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Add New Section")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(text = "Sections:", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Text(text = "Error: $error", color = MaterialTheme.colorScheme.error)
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                // ✅ Use the rootNavController to navigate to the full-screen page
+                onClick = { rootNavController.navigate("addSection") },
             ) {
-                items(sortedSections, key = { it.sectionId }) { section ->
-                    SectionItem(
-                        section = section,
-                        onEdit = {
-                            navController.navigate("editSection/${section.sectionId}/${section.gradeLevel}/${section.sectionName}")
-                        },
-                        onDelete = {
-                            sectionToDelete = section
-                            showDeleteConfirmationDialog = true
+                Icon(Icons.Filled.Add, contentDescription = "Add New Section")
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            Text(text = "Sections:", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (error != null) {
+                Text(text = "Error: $error", color = MaterialTheme.colorScheme.error)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    groupedSections.forEach { (gradeLevel, sectionsInGroup) ->
+                        val isExpanded = expandedGradeLevel == gradeLevel
+
+                        item {
+                            Card(
+                                onClick = {
+                                    expandedGradeLevel = if (isExpanded) null else gradeLevel
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = gradeLevel,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    val rotationAngle by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "rotation")
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Expand",
+                                        modifier = Modifier.rotate(rotationAngle)
+                                    )
+                                }
+                            }
                         }
-                    )
+
+                        item {
+                            AnimatedVisibility(visible = isExpanded) {
+                                Column(
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    sectionsInGroup.sortedBy { it.sectionName }.forEach { section ->
+                                        SectionItem(
+                                            section = section,
+                                            onEdit = {
+                                                // ✅ Use the rootNavController for full-screen navigation
+                                                rootNavController.navigate("editSection/${section.sectionId}/${section.gradeLevel}/${section.sectionName}")
+                                            },
+                                            onDelete = {
+                                                sectionToDelete = section
+                                                showDeleteConfirmationDialog = true
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -131,22 +177,47 @@ fun SectionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${section.gradeLevel} - ${section.sectionName}",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Edit Section")
+            Text(
+                text = section.sectionName,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box {
+                var menuExpanded by remember { mutableStateOf(false) }
+
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete Section")
+
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = {
+                            onEdit()
+                            menuExpanded = false
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            onDelete()
+                            menuExpanded = false
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        }
+                    )
                 }
             }
         }

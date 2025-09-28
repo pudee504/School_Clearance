@@ -2,9 +2,10 @@ package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,59 +23,65 @@ fun EditSectionScreen(
     sectionId: Int,
     initialGradeLevel: String,
     initialSectionName: String,
-    viewModel: SectionManagementViewModel = viewModel() // <-- Use the new ViewModel
+    viewModel: SectionManagementViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var selectedGradeLevel by remember { mutableStateOf(initialGradeLevel) }
     var sectionName by remember { mutableStateOf(initialSectionName) }
     var expanded by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Section") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(16.dp)
+    ) {
+        // --- Top Bar ---
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Edit Section",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.align(Alignment.Center)
             )
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(Icons.Filled.Close, contentDescription = "Close")
+            }
         }
-    ) { paddingValues ->
+
+        // --- Content ---
         Column(
             modifier = Modifier
-                .padding(paddingValues)
-                .padding(16.dp)
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
         ) {
-            Box(
-                modifier = Modifier.fillMaxWidth().wrapContentSize(Alignment.TopStart)
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
             ) {
                 OutlinedTextField(
-                    value = "Grade $selectedGradeLevel",
+                    // ✅ FIX: Directly use the state variable, which already contains "Grade X"
+                    value = selectedGradeLevel,
                     onValueChange = {},
                     label = { Text("Grade Level") },
                     readOnly = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(Icons.Filled.ArrowDropDown, contentDescription = "Dropdown")
-                        }
-                    }
+                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
                 )
-                DropdownMenu(
+                ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
-                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    val gradeLevels = (7..12).toList()
-                    gradeLevels.forEach { grade ->
+                    (7..12).forEach { grade ->
+                        val gradeName = "Grade $grade"
                         DropdownMenuItem(
-                            text = { Text("Grade $grade") },
+                            text = { Text(gradeName) },
                             onClick = {
-                                selectedGradeLevel = grade.toString()
+                                selectedGradeLevel = gradeName
                                 expanded = false
                             }
                         )
@@ -88,10 +95,22 @@ fun EditSectionScreen(
                 label = { Text("Section Name") },
                 modifier = Modifier.fillMaxWidth()
             )
+        }
 
+        // --- Bottom Buttons ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cancel")
+            }
             Button(
                 onClick = {
-                    if (selectedGradeLevel.isNotBlank() && sectionName.isNotBlank()) {
+                    if (sectionName.isNotBlank()) {
                         viewModel.updateSection(
                             sectionId = sectionId,
                             gradeLevel = selectedGradeLevel,
@@ -108,7 +127,7 @@ fun EditSectionScreen(
                         Toast.makeText(context, "Fields cannot be empty.", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(1f)
             ) {
                 Text("Save Changes")
             }

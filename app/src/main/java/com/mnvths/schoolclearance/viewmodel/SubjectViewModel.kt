@@ -5,7 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mnvths.schoolclearance.data.AddSubjectRequest
+import com.mnvths.schoolclearance.data.CurriculumResponse
+import com.mnvths.schoolclearance.data.CurriculumSubject
 import com.mnvths.schoolclearance.data.Subject
+import com.mnvths.schoolclearance.data.SubjectGroup
 import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -19,6 +22,11 @@ class SubjectViewModel : ViewModel() {
     private val _subjects = mutableStateOf<List<Subject>>(emptyList())
     val subjects: State<List<Subject>> = _subjects
 
+    // ✅ START: New state for the grouped curriculum list
+    private val _groupedSubjects = mutableStateOf<List<SubjectGroup>>(emptyList())
+    val groupedSubjects: State<List<SubjectGroup>> = _groupedSubjects
+    // ✅ END: New state
+
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
@@ -28,6 +36,63 @@ class SubjectViewModel : ViewModel() {
     init {
         fetchSubjects()
     }
+
+    // ✅ START: New function to fetch and process grouped subjects
+    // ✅ MODIFIED a function to implement the new grouping logic
+    fun fetchGroupedSubjects() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val response: CurriculumResponse = client.get("http://10.0.2.2:3000/subjects/curriculum").body()
+                val activeSem = response.activeSemester.toIntOrNull() ?: 1
+
+                val allGroups = mutableListOf<SubjectGroup>()
+
+                // JHS Grouping (no change)
+                response.subjects
+                    .filter { it.gradeLevelId != null && it.gradeLevelId <= 4 }
+                    .groupBy { it.gradeLevel!! }
+                    .toSortedMap(compareBy { it.filter { char -> char.isDigit() }.toInt() })
+                    .forEach { (gradeLevel, subjects) ->
+                        allGroups.add(SubjectGroup(gradeLevel, subjects))
+                    }
+
+                // ✅ START: New logic for SHS Grouping
+                val shsSubjectsByGrade = response.subjects
+                    .filter { it.gradeLevelId != null && it.gradeLevelId > 4 && it.semester == activeSem }
+                    .groupBy { it.gradeLevel!! }
+                    .toSortedMap()
+
+                shsSubjectsByGrade.forEach { (gradeLevel, subjects) ->
+                    // This block processes the list to handle duplicates and identify specialized subjects
+                    val subjectsGroupedById = subjects.groupBy { it.subjectId }
+
+                    val uniqueSubjects = subjectsGroupedById.map { (_, subjectList) ->
+                        // If a subject appears more than once, it's a Core/Applied subject. Don't show a strand.
+                        if (subjectList.size > 1) {
+                            subjectList.first().copy(strandName = null)
+                        } else {
+                            // If it appears only once, it's specialized. Keep the strand name.
+                            subjectList.first()
+                        }
+                    }.sortedBy { it.display_order } // Re-sort after processing
+
+                    allGroups.add(SubjectGroup("$gradeLevel - Semester $activeSem", uniqueSubjects))
+                }
+                // ✅ END: New logic for SHS Grouping
+
+                _groupedSubjects.value = allGroups
+
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    // ✅ END: New fetch function
+
 
     fun fetchSubjects() {
         viewModelScope.launch {

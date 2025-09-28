@@ -101,5 +101,25 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
                 studentId = backStackEntry.arguments?.getString("studentId")!!
             )
         }
+        composable("addSection") {
+            AddSectionScreen(navController = navController)
+        }
+
+        // ✅ ADDED: Fullscreen route for editing a section
+        composable(
+            "editSection/{sectionId}/{gradeLevel}/{sectionName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            EditSectionScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                initialGradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
+                initialSectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
+            )
+        }
     }
 }

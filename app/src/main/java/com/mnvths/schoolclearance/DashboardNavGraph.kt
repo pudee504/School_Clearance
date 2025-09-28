@@ -50,23 +50,11 @@ fun DashboardNavGraph(
             startDestination = "sectionManagement",
             route = "sections_graph"
         ) {
-            composable("sectionManagement") { SectionManagementScreen(navController = innerNavController) } // ✅ FIXED
-            composable("addSection") { AddSectionScreen(navController = innerNavController) } // ✅ FIXED
-            composable(
-                "editSection/{sectionId}/{gradeLevel}/{sectionName}",
-                arguments = listOf(
-                    navArgument("sectionId") { type = NavType.IntType },
-                    navArgument("gradeLevel") { type = NavType.StringType },
-                    navArgument("sectionName") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                EditSectionScreen(
-                    navController = innerNavController, // ✅ FIXED
-                    sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
-                    initialGradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
-                    initialSectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
-                )
+            composable("sectionManagement") {
+                // ✅ Pass the rootNavController to the screen
+                SectionManagementScreen(rootNavController = rootNavController)
             }
+            // ✅ "addSection" and "editSection" routes have been REMOVED from here
         }
 
         // --- Signatories Graph ---

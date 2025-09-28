@@ -234,3 +234,29 @@ data class CreateStudentRequest(
     val strandId: Int?,
     val specializationId: Int?
 )
+
+// ✅ START: Add new data classes to represent the structured data
+@Serializable
+data class CurriculumSubject(
+    val subjectId: Int,
+    val subjectName: String,
+    val gradeLevel: String?,
+    val gradeLevelId: Int?,
+    val strandName: String?,
+    val semester: Int?,
+    val display_order: Int
+)
+
+
+@Serializable
+data class CurriculumResponse(
+    val subjects: List<CurriculumSubject>,
+    val activeSemester: String
+)
+
+// This class will hold the final, grouped data for the UI
+data class SubjectGroup(
+    val title: String,
+    val subjects: List<CurriculumSubject>
+)
+// ✅ END: New data classes
