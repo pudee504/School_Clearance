@@ -87,7 +87,6 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                         authViewModel.logout()
                         navController.navigate("login") { popUpTo("login") { inclusive = true } }
                     },
-                    // ✅ 3. Pass the ViewModel down to the AdminDashboard
                     settingsViewModel = settingsViewModel
                 )
             }
@@ -95,6 +94,19 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
 
         composable("addStudent") {
             AddStudentScreen(navController = navController)
+        }
+
+        // ✅ REMOVED the "addStudentToSection" route
+
+        // ✅ ADD THIS NEW ROUTE for assigning existing students
+        composable(
+            "assignStudent/{sectionId}",
+            arguments = listOf(navArgument("sectionId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            AssignStudentScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId")!!
+            )
         }
 
         composable(
@@ -107,16 +119,30 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
             )
         }
 
-        // ✅ ADDED: Route for the admin student detail screen at the top level.
         composable(
             "adminStudentDetail/{studentId}",
             arguments = listOf(navArgument("studentId") { type = NavType.StringType })
         ) { backStackEntry ->
             AdminStudentDetailScreen(
                 navController = navController,
-                // ✅ 4. Pass the appSettings state to the detail screen
                 appSettings = appSettings,
                 studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+            )
+        }
+
+        composable(
+            "sectionStudents/{sectionId}/{sectionName}/{gradeLevel}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("sectionName") { type = NavType.StringType },
+                navArgument("gradeLevel") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            SectionStudentListScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId")!!,
+                sectionName = backStackEntry.arguments?.getString("sectionName")!!,
+                gradeLevel = backStackEntry.arguments?.getString("gradeLevel")!!
             )
         }
 

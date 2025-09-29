@@ -35,6 +35,7 @@ import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 fun AddStudentScreen(
     navController: NavController,
     viewModel: StudentManagementViewModel = viewModel()
+    // The extra parameters have been removed
 ) {
     val context = LocalContext.current
     var studentId by remember { mutableStateOf("") }
@@ -300,7 +301,6 @@ fun AddStudentScreen(
                         return@Button
                     }
 
-                    // ✅ MODIFIED: Added check for selectedGrade
                     if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && selectedGrade != null) {
                         viewModel.addStudent(
                             studentId = studentId,
@@ -308,7 +308,7 @@ fun AddStudentScreen(
                             middleName = middleName.takeIf { it.isNotBlank() },
                             lastName = lastName,
                             password = password,
-                            gradeLevelId = selectedGrade!!.id, // ✅ MODIFIED
+                            gradeLevelId = selectedGrade!!.id,
                             sectionId = selectedSection?.sectionId,
                             strandId = selectedStrand?.id,
                             specializationId = selectedSpecialization?.id,
@@ -321,7 +321,6 @@ fun AddStudentScreen(
                             }
                         )
                     } else {
-                        // ✅ MODIFIED: Updated error message
                         Toast.makeText(context, "Please fill all required fields, including Grade Level.", Toast.LENGTH_SHORT).show()
                     }
                 },
