@@ -1,4 +1,3 @@
-// In a new file: ClearanceViewModel.kt
 package com.mnvths.schoolclearance.viewmodel
 
 import androidx.compose.runtime.State
@@ -6,19 +5,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mnvths.schoolclearance.data.StudentClearanceStatus
-import com.mnvths.schoolclearance.data.UpdateClearanceRequest
+import com.mnvths.schoolclearance.data.UpdateClearanceStatusRequest
 import com.mnvths.schoolclearance.network.KtorClient
-import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 
-
+// Assumed API Response Wrapper
+@Serializable
+data class SignatoryClearanceResponse(
+    val students: List<StudentClearanceStatus>,
+    val schoolYear: String,
+    val term: String,
+    val requirementId: Int
+)
 
 class ClearanceViewModel : ViewModel() {
     private val client = KtorClient.httpClient
@@ -32,13 +35,25 @@ class ClearanceViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
+    // Store context fetched with the student list
+    private var _schoolYear: String? = null
+    private var _term: String? = null
+    private var _requirementId: Int? = null
+
     fun fetchStudentClearanceStatus(sectionId: Int, subjectId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: List<StudentClearanceStatus> = client.get("http://10.0.2.2:3000/clearance/section/$sectionId/subject/$subjectId").body()
-                _students.value = response
+                // This API endpoint is now assumed to return the response wrapper
+                val response: SignatoryClearanceResponse = client.get("http://10.0.2.2:3000/clearance/section/$sectionId/subject/$subjectId").body()
+
+                // Store the context
+                _students.value = response.students
+                _schoolYear = response.schoolYear
+                _term = response.term
+                _requirementId = response.requirementId
+
             } catch (e: Exception) {
                 _error.value = "Error fetching students: ${e.message}"
             } finally {
@@ -47,31 +62,81 @@ class ClearanceViewModel : ViewModel() {
         }
     }
 
-    // ✅ In ClearanceViewModel.kt
-
-// ... inside the ClearanceViewModel class
-
-    fun clearAllNotClearedStudents(subjectId: Int, sectionId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    // ✅ MODIFIED: Updated to use the new robust clearance update logic.
+    fun updateStudentClearance(
+        userId: Int,
+        isCleared: Boolean,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
-            // Find all students who are not yet cleared
-            val notClearedStudents = _students.value.filter { !it.isCleared }
-            if (notClearedStudents.isEmpty()) {
-                onSuccess() // Nothing to do
+            // Check if we have the necessary context
+            if (_schoolYear == null || _term == null || _requirementId == null) {
+                onError("Clearance context not loaded. Please refresh.")
                 return@launch
             }
 
-            // Use a loop to call the update function for each student
-            // In a real-world app, you might create a dedicated "batch update" API endpoint
+            try {
+                // Use the new, consistent request model and endpoint
+                val requestBody = UpdateClearanceStatusRequest(
+                    userId = userId,
+                    requirementId = _requirementId!!,
+                    schoolYear = _schoolYear!!,
+                    term = _term!!,
+                    isCleared = isCleared
+                )
+                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/clearance/status") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }
+
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    // Locally update the student's status for immediate UI feedback
+                    _students.value = _students.value.map {
+                        if (it.userId == userId) it.copy(isCleared = isCleared) else it
+                    }
+                } else {
+                    onError("Failed to update status: ${response.bodyAsText()}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+    // ✅ MODIFIED: This function now uses the corrected update logic.
+    fun clearAllNotClearedStudents(sectionId: Int, subjectId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val notClearedStudents = _students.value.filter { !it.isCleared }
+            if (notClearedStudents.isEmpty()) {
+                onSuccess()
+                return@launch
+            }
+
+            if (_schoolYear == null || _term == null || _requirementId == null) {
+                onError("Clearance context not loaded. Please refresh.")
+                return@launch
+            }
+
             var hasErrorOccurred = false
+            // This is a simplified batch update. A dedicated backend endpoint would be more efficient.
             for (student in notClearedStudents) {
                 try {
-                    val response: HttpResponse = client.post("http://10.0.2.2:3000/clearance/update") {
+                    val requestBody = UpdateClearanceStatusRequest(
+                        userId = student.userId,
+                        requirementId = _requirementId!!,
+                        schoolYear = _schoolYear!!,
+                        term = _term!!,
+                        isCleared = true
+                    )
+                    val response: HttpResponse = client.put("http://10.0.2.2:3000/students/clearance/status") {
                         contentType(ContentType.Application.Json)
-                        setBody(UpdateClearanceRequest(student.userId, subjectId, sectionId, true))
+                        setBody(requestBody)
                     }
                     if (!response.status.isSuccess()) {
                         hasErrorOccurred = true
-                        break // Stop if one of the updates fails
+                        break
                     }
                 } catch (e: Exception) {
                     hasErrorOccurred = true
@@ -84,36 +149,8 @@ class ClearanceViewModel : ViewModel() {
             } else {
                 onSuccess()
             }
-            // Always refresh the list at the end
+            // Always refresh the list from the server to ensure consistency.
             fetchStudentClearanceStatus(sectionId, subjectId)
         }
     }
-
-    fun updateStudentClearance(
-        userId: Int,
-        subjectId: Int,
-        sectionId: Int,
-        isCleared: Boolean,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/clearance/update") {
-                    contentType(ContentType.Application.Json)
-                    setBody(UpdateClearanceRequest(userId, subjectId, sectionId, isCleared))
-                }
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                    // Refresh the list with the updated status
-                    fetchStudentClearanceStatus(sectionId, subjectId)
-                } else {
-                    onError("Failed to update status: ${response.bodyAsText()}")
-                }
-            } catch (e: Exception) {
-                onError("Network error: ${e.message}")
-            }
-        }
-    }
 }
-

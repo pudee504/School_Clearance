@@ -95,11 +95,13 @@ data class StudentClearanceStatus(
     val isCleared: Boolean
 )
 
+// ✅ REPLACED: This old request model is replaced by the more detailed one below.
 @Serializable
-data class UpdateClearanceRequest(
+data class UpdateClearanceStatusRequest(
     val userId: Int,
-    val subjectId: Int,
-    val sectionId: Int,
+    val requirementId: Int,
+    val schoolYear: String,
+    val term: String,
     val isCleared: Boolean
 )
 
@@ -129,10 +131,14 @@ data class StudentListItem(
     val sectionId: Int?
 )
 
+// ✅ MODIFIED: This model is now more detailed to support the new UI and logic.
 @Serializable
 data class ClearanceStatusItem(
-    val signatoryName: String,
-    val isCleared: Boolean
+    val clearanceId: Int?,
+    val requirementId: Int,
+    val signatoryName: String?,
+    val isCleared: Boolean,
+    val requirementType: String
 )
 
 @Serializable
@@ -142,9 +148,11 @@ data class ActiveTerm(
     val termNumber: String
 )
 
+// ✅ MODIFIED: Added the student's internal user ID.
 @Serializable
 data class AdminStudentProfile(
     val id: String,
+    val userId: Int,
     val name: String,
     val gradeLevel: String?,
     val section: String?,
@@ -169,7 +177,6 @@ data class UpdateStudentRequest(
     val password: String?,
     val sectionId: Int?,
     val strandId: Int?,
-    // ✅ ADDED: specializationId for updating student's enrollment
     val specializationId: Int?
 )
 
@@ -189,7 +196,6 @@ data class StudentDetailsForEdit(
     val sectionId: Int?,
     val gradeLevel: String?,
     val strandId: Int?,
-    // ✅ ADDED: Include current specialization to pre-select in dropdown
     val specializationId: Int?
 )
 
@@ -222,7 +228,6 @@ data class Specialization(
     val name: String
 )
 
-// Add this new data class to your models.kt file
 @Serializable
 data class CreateStudentRequest(
     val studentId: String,
@@ -235,7 +240,6 @@ data class CreateStudentRequest(
     val specializationId: Int?
 )
 
-// ✅ START: Add new data classes to represent the structured data
 @Serializable
 data class CurriculumSubject(
     val subjectId: Int,
@@ -254,9 +258,7 @@ data class CurriculumResponse(
     val activeSemester: String
 )
 
-// This class will hold the final, grouped data for the UI
 data class SubjectGroup(
     val title: String,
     val subjects: List<CurriculumSubject>
 )
-// ✅ END: New data classes

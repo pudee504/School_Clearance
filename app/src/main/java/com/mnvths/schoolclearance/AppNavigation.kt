@@ -75,7 +75,6 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         composable("adminDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
-                // ✅ MODIFIED: Pass the root NavController to the AdminDashboard
                 AdminDashboard(
                     rootNavController = navController,
                     user = user,
@@ -87,7 +86,6 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
             }
         }
 
-        // ✅ ADDED: New top-level, fullscreen destinations
         composable("addStudent") {
             AddStudentScreen(navController = navController)
         }
@@ -101,11 +99,22 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
                 studentId = backStackEntry.arguments?.getString("studentId")!!
             )
         }
+
+        // ✅ ADDED: Route for the admin student detail screen at the top level.
+        composable(
+            "adminStudentDetail/{studentId}",
+            arguments = listOf(navArgument("studentId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            AdminStudentDetailScreen(
+                navController = navController,
+                studentId = backStackEntry.arguments?.getString("studentId") ?: ""
+            )
+        }
+
         composable("addSection") {
             AddSectionScreen(navController = navController)
         }
 
-        // ✅ ADDED: Fullscreen route for editing a section
         composable(
             "editSection/{sectionId}/{gradeLevel}/{sectionName}",
             arguments = listOf(

@@ -1,4 +1,3 @@
-// In ClearanceScreen.kt
 package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
@@ -12,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,10 +35,8 @@ fun ClearanceScreen(
     val error by viewModel.error
     val context = LocalContext.current
 
-    // State for the search bar
     var searchText by remember { mutableStateOf("") }
 
-    // This derived state will filter and sort the list automatically
     val processedStudents = remember(students, searchText) {
         students
             .filter { student ->
@@ -48,8 +44,6 @@ fun ClearanceScreen(
                 fullName.contains(searchText, ignoreCase = true) || student.studentId.contains(searchText, ignoreCase = true)
             }
             .sortedWith(
-                // This sorts by "isCleared" status first (false comes before true),
-                // then alphabetically by last name.
                 compareBy<StudentClearanceStatus> { it.isCleared }
                     .thenBy { it.lastName }
                     .thenBy { it.firstName }
@@ -65,10 +59,8 @@ fun ClearanceScreen(
             TopAppBar(
                 title = {
                     Column {
-                        // ✅ This is the updated title text
                         Text(text = "$subjectName Clearance")
                         Text(
-                            // ✅ This is the updated subtitle text
                             text = "Section: $gradeLevel - $sectionName",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -91,8 +83,6 @@ fun ClearanceScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-
-            // Search Bar
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
@@ -103,7 +93,6 @@ fun ClearanceScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // "Clear All" Button
             Button(
                 onClick = {
                     viewModel.clearAllNotClearedStudents(
@@ -118,27 +107,37 @@ fun ClearanceScreen(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                // Only enable the button if there are students who are not cleared
                 enabled = students.any { !it.isCleared }
             ) {
                 Text("Clear All Not Cleared")
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isLoading) { /* ... Loading indicator remains the same ... */ }
-            else if (error != null) { /* ... Error text remains the same ... */ }
-            else if (students.isEmpty()) { /* ... "No students found" text remains the same ... */ }
+            if (isLoading) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    CircularProgressIndicator()
+                }
+            }
+            else if (error != null) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Text(text = error!!, color = MaterialTheme.colorScheme.error)
+                }
+            }
+            else if (students.isEmpty()) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Text("No students found in this section.")
+                }
+            }
             else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Use the new processedStudents list
-                    items(processedStudents) { student ->
+                    items(processedStudents, key = { it.userId }) { student ->
                         StudentClearanceItem(
                             student = student,
                             onStatusChange = { newStatus ->
+                                // ✅ FIXED: This function call is now updated to match the new ViewModel.
+                                // It no longer sends the unnecessary subjectId and sectionId.
                                 viewModel.updateStudentClearance(
                                     userId = student.userId,
-                                    subjectId = subjectId,
-                                    sectionId = sectionId,
                                     isCleared = newStatus,
                                     onSuccess = {
                                         val statusText = if (newStatus) "cleared" else "marked as not cleared"
@@ -160,7 +159,7 @@ fun ClearanceScreen(
 @Composable
 fun StudentClearanceItem(
     student: StudentClearanceStatus,
-    onStatusChange: (Boolean) -> Unit // This lambda now passes the new status
+    onStatusChange: (Boolean) -> Unit
 ) {
     val formattedName = "${student.lastName}, ${student.firstName}" +
             (student.middleName?.takeIf { it.isNotBlank() }?.let { " ${it.first()}." } ?: "")
@@ -177,14 +176,11 @@ fun StudentClearanceItem(
                 Text(text = formattedName, fontWeight = FontWeight.Bold)
                 Text(text = "ID: ${student.studentId}", style = MaterialTheme.typography.bodySmall)
             }
-            // The button now changes based on the student's current status
             if (student.isCleared) {
-                // If cleared, show an "Undo" button
                 OutlinedButton(onClick = { onStatusChange(false) }) {
                     Text("Undo")
                 }
             } else {
-                // If not cleared, show the "Clear" button
                 Button(onClick = { onStatusChange(true) }) {
                     Text("Clear")
                 }

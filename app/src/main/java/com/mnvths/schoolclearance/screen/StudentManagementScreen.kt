@@ -131,7 +131,7 @@ fun StudentManagementScreen(
                         StudentItem(
                             student = student,
                             onClick = {
-                                // navController.navigate("adminStudentDetail/${student.id}")
+                                navController.navigate("adminStudentDetail/${student.id}")
                             },
                             onEdit = {
                                 navController.navigate("editStudent/${student.id}")
@@ -187,7 +187,9 @@ fun StudentItem(
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -239,7 +241,6 @@ fun FilterDropdown(
     label: String,
     options: List<String>,
     selectedValue: String?,
-    // ✅ CORRECTED: The typo "onValueeChange" is now "onValueChange"
     onValueChange: (String?) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
@@ -269,30 +270,4 @@ fun FilterDropdown(
             }
         }
     }
-}
-
-@Composable
-fun DeleteStudentConfirmationDialog(
-    studentName: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete Student") },
-        text = { Text("Are you sure you want to delete $studentName? This will remove all their records and cannot be undone.") },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Delete")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }

@@ -1,4 +1,3 @@
-// RENAME THIS FILE to DashboardNavGraph.kt
 package com.mnvths.schoolclearance
 
 import android.os.Build
@@ -21,7 +20,7 @@ fun DashboardNavGraph(
     modifier: Modifier = Modifier
 ) {
     NavHost(
-        navController = innerNavController, // Use the INNER controller for this NavHost
+        navController = innerNavController,
         startDestination = "students_graph",
         modifier = modifier
     ) {
@@ -31,18 +30,10 @@ fun DashboardNavGraph(
             route = "students_graph"
         ) {
             composable("studentManagement") {
-                // This screen needs to open fullscreen pages, so it gets the ROOT controller
+                // This screen uses the root controller to navigate to top-level screens like "Add" or "Edit"
                 StudentManagementScreen(navController = rootNavController)
             }
-            composable(
-                "adminStudentDetail/{studentId}",
-                arguments = listOf(navArgument("studentId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                AdminStudentDetailScreen(
-                    navController = innerNavController, // ✅ FIXED: Pass innerNavController
-                    studentId = backStackEntry.arguments?.getString("studentId") ?: ""
-                )
-            }
+            // ✅ REMOVED: The "adminStudentDetail" composable was removed from this nested graph.
         }
 
         // --- Sections Graph ---
@@ -51,10 +42,8 @@ fun DashboardNavGraph(
             route = "sections_graph"
         ) {
             composable("sectionManagement") {
-                // ✅ Pass the rootNavController to the screen
                 SectionManagementScreen(rootNavController = rootNavController)
             }
-            // ✅ "addSection" and "editSection" routes have been REMOVED from here
         }
 
         // --- Signatories Graph ---
@@ -62,8 +51,8 @@ fun DashboardNavGraph(
             startDestination = "signatoryList",
             route = "signatories_graph"
         ) {
-            composable("signatoryList") { SignatoryListScreen(navController = innerNavController) } // ✅ FIXED
-            composable("addSignatory") { AddSignatoryScreen(navController = innerNavController) } // ✅ FIXED
+            composable("signatoryList") { SignatoryListScreen(navController = innerNavController) }
+            composable("addSignatory") { AddSignatoryScreen(navController = innerNavController) }
             composable(
                 route = "signatoryDetails/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
                 arguments = listOf(
@@ -76,7 +65,7 @@ fun DashboardNavGraph(
                 )
             ) { backStackEntry ->
                 SignatoryDetailsScreen(
-                    navController = innerNavController, // ✅ FIXED
+                    navController = innerNavController,
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
                     firstName = backStackEntry.arguments?.getString("firstName") ?: "",
@@ -97,7 +86,7 @@ fun DashboardNavGraph(
                 )
             ) { backStackEntry ->
                 EditSignatoryScreen(
-                    navController = innerNavController, // ✅ FIXED
+                    navController = innerNavController,
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
                     firstName = backStackEntry.arguments?.getString("firstName") ?: "",
@@ -114,7 +103,7 @@ fun DashboardNavGraph(
                 )
             ) { backStackEntry ->
                 AssignSubjectToSignatoryScreen(
-                    navController = innerNavController, // ✅ FIXED
+                    navController = innerNavController,
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
                 )
@@ -129,7 +118,7 @@ fun DashboardNavGraph(
                 )
             ) { backStackEntry ->
                 AssignClassesToSubjectScreen(
-                    navController = innerNavController, // ✅ FIXED
+                    navController = innerNavController,
                     signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                     subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
                     subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
@@ -146,7 +135,7 @@ fun DashboardNavGraph(
                 )
             ) { backStackEntry ->
                 ClearanceScreen(
-                    navController = innerNavController, // ✅ FIXED
+                    navController = innerNavController,
                     sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
                     subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
                     gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
@@ -161,9 +150,9 @@ fun DashboardNavGraph(
             startDestination = "subjectList",
             route = "subjects_graph"
         ) {
-            composable("subjectList") { SubjectListScreen(navController = innerNavController) } // ✅ FIXED
+            composable("subjectList") { SubjectListScreen(navController = innerNavController) }
             composable("addEditSubject") {
-                AddEditSubjectScreen(navController = innerNavController, subjectId = null, initialName = null) // ✅ FIXED
+                AddEditSubjectScreen(navController = innerNavController, subjectId = null, initialName = null)
             }
             composable(
                 "addEditSubject/{subjectId}/{subjectName}",
@@ -173,7 +162,7 @@ fun DashboardNavGraph(
                 )
             ) { backStackEntry ->
                 AddEditSubjectScreen(
-                    navController = innerNavController, // ✅ FIXED
+                    navController = innerNavController,
                     subjectId = backStackEntry.arguments?.getInt("subjectId"),
                     initialName = backStackEntry.arguments?.getString("subjectName")
                 )
@@ -185,7 +174,7 @@ fun DashboardNavGraph(
             startDestination = "accountList",
             route = "accounts_graph"
         ) {
-            composable("accountList") { AccountListScreen(navController = innerNavController) } // ✅ FIXED
+            composable("accountList") { AccountListScreen(navController = innerNavController) }
         }
     }
 }

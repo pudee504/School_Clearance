@@ -131,21 +131,15 @@ class StudentManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                // Ensure this is using CreateStudentRequest
                 val requestBody = CreateStudentRequest(
-                    studentId = studentId,
-                    firstName = firstName,
-                    middleName = middleName,
-                    lastName = lastName,
-                    password = password, // This now correctly maps to the data class
-                    sectionId = sectionId,
-                    strandId = strandId,
-                    specializationId = specializationId
+                    studentId = studentId, firstName = firstName, middleName = middleName,
+                    lastName = lastName, password = password, sectionId = sectionId,
+                    strandId = strandId, specializationId = specializationId
                 )
 
                 val response: HttpResponse = client.post("http://10.0.2.2:3000/students") {
                     contentType(ContentType.Application.Json)
-                    setBody(requestBody) // Send the correct object
+                    setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
@@ -156,7 +150,6 @@ class StudentManagementViewModel : ViewModel() {
                     onError(errorMessage.ifBlank { "Failed to add student." })
                 }
             } catch (e: Exception) {
-                // The error you were seeing likely originated here
                 onError("Network error: ${e.message}")
             }
         }
@@ -201,7 +194,8 @@ class StudentManagementViewModel : ViewModel() {
     fun fetchAdminStudentProfile(studentId: String) {
         viewModelScope.launch {
             isLoading.value = true
-            _adminStudentProfile.value = null
+            // ✅ FIXED: This line, which caused the crash, has been removed.
+            // _adminStudentProfile.value = null
             error.value = null
             try {
                 _adminStudentProfile.value = client.get("http://10.0.2.2:3000/students/admin-profile/$studentId").body()
@@ -217,7 +211,6 @@ class StudentManagementViewModel : ViewModel() {
         _adminStudentProfile.value = null
     }
 
-    // ✅ MODIFIED: The function now takes the updated request object
     fun updateStudent(
         originalStudentId: String, updatedDetails: UpdateStudentRequest,
         onSuccess: () -> Unit, onError: (String) -> Unit
@@ -235,6 +228,40 @@ class StudentManagementViewModel : ViewModel() {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
                     onError(errorMessage.ifBlank { "Failed to update student." })
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
+    fun updateClearanceStatus(
+        isCleared: Boolean,
+        item: ClearanceStatusItem,
+        profile: AdminStudentProfile,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val requestBody = UpdateClearanceStatusRequest(
+                    userId = profile.userId,
+                    requirementId = item.requirementId,
+                    schoolYear = profile.activeTerm.schoolYear,
+                    term = profile.activeTerm.termNumber,
+                    isCleared = isCleared
+                )
+                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/clearance/status") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }
+                if (response.status.isSuccess()) {
+                    fetchAdminStudentProfile(profile.id) // Refetch data on success
+                    onSuccess()
+                } else {
+                    val errorBody = response.bodyAsText()
+                    val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    onError(errorMessage.ifBlank { "Failed to update status." })
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")
