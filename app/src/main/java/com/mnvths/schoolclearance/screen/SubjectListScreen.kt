@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.mnvths.schoolclearance.data.AppSettings
 import com.mnvths.schoolclearance.data.CurriculumSubject
 import com.mnvths.schoolclearance.viewmodel.SubjectViewModel
 
@@ -30,7 +31,8 @@ import com.mnvths.schoolclearance.viewmodel.SubjectViewModel
 @Composable
 fun SubjectListScreen(
     navController: NavController,
-    viewModel: SubjectViewModel = viewModel()
+    viewModel: SubjectViewModel = viewModel(),
+    appSettings: AppSettings
 ) {
     val subjectGroups by viewModel.groupedSubjects
     val isLoading by viewModel.isLoading
@@ -44,7 +46,7 @@ fun SubjectListScreen(
 
     var expandedGroupTitle by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(appSettings) {
         viewModel.fetchGroupedSubjects()
     }
 

@@ -195,6 +195,7 @@ data class StudentDetailsForEdit(
     val lastName: String,
     val sectionId: Int?,
     val gradeLevel: String?,
+    val gradeLevelId: Int?, // ✅ ADDED: To know the student's current grade level ID
     val strandId: Int?,
     val specializationId: Int?
 )
@@ -235,6 +236,7 @@ data class CreateStudentRequest(
     val middleName: String?,
     val lastName: String,
     val password: String,
+    val gradeLevelId: Int, // ✅ ADDED: Grade level is now required
     val sectionId: Int?,
     val strandId: Int?,
     val specializationId: Int?

@@ -123,6 +123,7 @@ class StudentManagementViewModel : ViewModel() {
         middleName: String?,
         lastName: String,
         password: String,
+        gradeLevelId: Int, // ✅ MODIFIED
         sectionId: Int?,
         strandId: Int?,
         specializationId: Int?,
@@ -133,8 +134,9 @@ class StudentManagementViewModel : ViewModel() {
             try {
                 val requestBody = CreateStudentRequest(
                     studentId = studentId, firstName = firstName, middleName = middleName,
-                    lastName = lastName, password = password, sectionId = sectionId,
-                    strandId = strandId, specializationId = specializationId
+                    lastName = lastName, password = password, gradeLevelId = gradeLevelId, // ✅ MODIFIED
+                    sectionId = sectionId, strandId = strandId,
+                    specializationId = specializationId
                 )
 
                 val response: HttpResponse = client.post("http://10.0.2.2:3000/students") {
@@ -194,8 +196,6 @@ class StudentManagementViewModel : ViewModel() {
     fun fetchAdminStudentProfile(studentId: String) {
         viewModelScope.launch {
             isLoading.value = true
-            // ✅ FIXED: This line, which caused the crash, has been removed.
-            // _adminStudentProfile.value = null
             error.value = null
             try {
                 _adminStudentProfile.value = client.get("http://10.0.2.2:3000/students/admin-profile/$studentId").body()

@@ -3,6 +3,7 @@ package com.mnvths.schoolclearance
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -10,16 +11,20 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.mnvths.schoolclearance.data.AppSettings
 import com.mnvths.schoolclearance.data.LoggedInUser
 import com.mnvths.schoolclearance.screen.* // Make sure all your screens are imported
 import com.mnvths.schoolclearance.viewmodel.AuthViewModel
+import com.mnvths.schoolclearance.viewmodel.SettingsViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
+fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
+                  settingsViewModel: SettingsViewModel = viewModel()) {
     val navController = rememberNavController()
     val loggedInUser by authViewModel.loggedInUser
     val isUserLoggedIn by authViewModel.isUserLoggedIn
+    val appSettings by settingsViewModel.settings.collectAsState()
 
     val startDestination = if (isUserLoggedIn) {
         when (val user = loggedInUser) {
@@ -81,7 +86,9 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
                     onSignOut = {
                         authViewModel.logout()
                         navController.navigate("login") { popUpTo("login") { inclusive = true } }
-                    }
+                    },
+                    // ✅ 3. Pass the ViewModel down to the AdminDashboard
+                    settingsViewModel = settingsViewModel
                 )
             }
         }
@@ -107,6 +114,8 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         ) { backStackEntry ->
             AdminStudentDetailScreen(
                 navController = navController,
+                // ✅ 4. Pass the appSettings state to the detail screen
+                appSettings = appSettings,
                 studentId = backStackEntry.arguments?.getString("studentId") ?: ""
             )
         }

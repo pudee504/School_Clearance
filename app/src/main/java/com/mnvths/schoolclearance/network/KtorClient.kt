@@ -1,3 +1,5 @@
+// file: network/KtorClient.kt
+
 package com.mnvths.schoolclearance.network
 
 import io.ktor.client.*
@@ -12,6 +14,9 @@ object KtorClient {
             json(Json {
                 ignoreUnknownKeys = true
                 isLenient = true
+                // ✅ ADD THIS LINE. This is the fix.
+                // It forces all fields from your data class to be sent to the server.
+                encodeDefaults = true
             })
         }
     }

@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.mnvths.schoolclearance.data.AppSettings
 import com.mnvths.schoolclearance.screen.*
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -17,6 +18,7 @@ import com.mnvths.schoolclearance.screen.*
 fun DashboardNavGraph(
     innerNavController: NavHostController,
     rootNavController: NavHostController,
+    appSettings: AppSettings,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -150,7 +152,7 @@ fun DashboardNavGraph(
             startDestination = "subjectList",
             route = "subjects_graph"
         ) {
-            composable("subjectList") { SubjectListScreen(navController = innerNavController) }
+            composable("subjectList") { SubjectListScreen(navController = innerNavController, appSettings = appSettings) }
             composable("addEditSubject") {
                 AddEditSubjectScreen(navController = innerNavController, subjectId = null, initialName = null)
             }

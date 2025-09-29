@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.AdminStudentProfile
+import com.mnvths.schoolclearance.data.AppSettings
 import com.mnvths.schoolclearance.data.ClearanceStatusItem
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 
@@ -26,7 +27,8 @@ import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
 fun AdminStudentDetailScreen(
     navController: NavController,
     studentId: String,
-    viewModel: StudentManagementViewModel = viewModel()
+    viewModel: StudentManagementViewModel = viewModel(),
+    appSettings: AppSettings
 ) {
     val profile by viewModel.adminStudentProfile.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -39,7 +41,7 @@ fun AdminStudentDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
 
-    LaunchedEffect(studentId) {
+    LaunchedEffect(studentId, appSettings) {
         viewModel.fetchAdminStudentProfile(studentId)
     }
 

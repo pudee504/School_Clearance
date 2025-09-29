@@ -60,6 +60,7 @@ fun AdminDashboard(
 
     val appSettings by settingsViewModel.settings.collectAsState()
     var showSettingsDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val screens = listOf(
         AdminScreen(route = "students_graph", title = "Students", icon = Icons.Filled.People),
@@ -127,7 +128,8 @@ fun AdminDashboard(
                 // ✅ CHANGED: Use the new graph and pass BOTH controllers
                 DashboardNavGraph(
                     innerNavController = innerNavController,
-                    rootNavController = rootNavController
+                    rootNavController = rootNavController,
+                    appSettings = appSettings
                 )
             }
         }
@@ -140,8 +142,15 @@ fun AdminDashboard(
             onSave = { newSettings ->
                 settingsViewModel.updateSettings(
                     newSettings = newSettings,
-                    onSuccess = { showSettingsDialog = false },
-                    onError = { /* Handle error if needed */ }
+                    onSuccess = {
+                        showSettingsDialog = false
+                        // ✅ 2. Use the 'context' variable that was captured from the outer scope.
+                        Toast.makeText(context, "Settings Saved!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { errorMsg ->
+                        // You can also use it here for error messages.
+                        Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                    }
                 )
             }
         )
@@ -281,8 +290,11 @@ fun SettingsDialog(
                     activeQuarterJhs = jhsQuarter,
                     activeSemesterShs = shsSemester
                 )
+                // The onSave function now contains all the logic for saving,
+                // closing the dialog, and showing the toast.
                 onSave(newSettings)
-                Toast.makeText(context, "Settings Saved!", Toast.LENGTH_SHORT).show()
+                // ❌ REMOVE THE TOAST FROM HERE
+                // Toast.makeText(context, "Settings Saved!", Toast.LENGTH_SHORT).show()
             }) {
                 Text("Save")
             }

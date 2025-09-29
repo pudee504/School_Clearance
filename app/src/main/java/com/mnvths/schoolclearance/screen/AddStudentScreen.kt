@@ -1,6 +1,5 @@
 package com.mnvths.schoolclearance.screen
 
-// STEP 1: ADD ALL OF THESE IMPORTS
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -64,7 +63,6 @@ fun AddStudentScreen(
     var trackExpanded by remember { mutableStateOf(false) }
     var strandExpanded by remember { mutableStateOf(false) }
     var specializationExpanded by remember { mutableStateOf(false) }
-    // STEP 2: TYPO FIX HERE
     var sectionExpanded by remember { mutableStateOf(false) }
 
     // Derived state to control UI visibility
@@ -110,7 +108,9 @@ fun AddStudentScreen(
             .padding(horizontal = 16.dp)
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         ) {
             Text(text = "Create New Student", style = MaterialTheme.typography.titleLarge, modifier = Modifier.align(Alignment.Center))
             IconButton(onClick = { navController.popBackStack() }, modifier = Modifier.align(Alignment.CenterStart)) {
@@ -137,7 +137,9 @@ fun AddStudentScreen(
                     readOnly = true,
                     label = { Text("Grade Level") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = gradeLevelExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                 )
                 ExposedDropdownMenu(expanded = gradeLevelExpanded, onDismissRequest = { gradeLevelExpanded = false }) {
                     DropdownMenuItem(text = { Text("None") }, onClick = { selectedGrade = null; gradeLevelExpanded = false })
@@ -156,7 +158,9 @@ fun AddStudentScreen(
                         readOnly = true,
                         label = { Text("TVE Specialization") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
                     ExposedDropdownMenu(expanded = specializationExpanded, onDismissRequest = { specializationExpanded = false }) {
                         specializations.forEach { spec ->
@@ -175,7 +179,9 @@ fun AddStudentScreen(
                         readOnly = true,
                         label = { Text("Track") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = trackExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                     )
                     ExposedDropdownMenu(expanded = trackExpanded, onDismissRequest = { trackExpanded = false }) {
                         shsTracks.forEach { track ->
@@ -198,7 +204,9 @@ fun AddStudentScreen(
                             readOnly = true,
                             label = { Text("Strand") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = strandExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                             enabled = filteredStrands.isNotEmpty()
                         )
                         ExposedDropdownMenu(expanded = strandExpanded, onDismissRequest = { strandExpanded = false }) {
@@ -216,7 +224,9 @@ fun AddStudentScreen(
                             readOnly = true,
                             label = { Text("Specialization / Major") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = specializationExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                             enabled = specializations.isNotEmpty()
                         )
                         ExposedDropdownMenu(expanded = specializationExpanded, onDismissRequest = { specializationExpanded = false }) {
@@ -235,7 +245,9 @@ fun AddStudentScreen(
                     readOnly = true,
                     label = { Text("Section") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sectionExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                     enabled = selectedGrade != null
                 )
                 ExposedDropdownMenu(expanded = sectionExpanded, onDismissRequest = { sectionExpanded = false }) {
@@ -263,7 +275,9 @@ fun AddStudentScreen(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedButton(
@@ -285,13 +299,16 @@ fun AddStudentScreen(
                         Toast.makeText(context, passwordError, Toast.LENGTH_LONG).show()
                         return@Button
                     }
-                    if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank()) {
+
+                    // ✅ MODIFIED: Added check for selectedGrade
+                    if (studentId.isNotBlank() && firstName.isNotBlank() && lastName.isNotBlank() && selectedGrade != null) {
                         viewModel.addStudent(
                             studentId = studentId,
                             firstName = firstName,
                             middleName = middleName.takeIf { it.isNotBlank() },
                             lastName = lastName,
                             password = password,
+                            gradeLevelId = selectedGrade!!.id, // ✅ MODIFIED
                             sectionId = selectedSection?.sectionId,
                             strandId = selectedStrand?.id,
                             specializationId = selectedSpecialization?.id,
@@ -304,7 +321,8 @@ fun AddStudentScreen(
                             }
                         )
                     } else {
-                        Toast.makeText(context, "Please fill all required fields.", Toast.LENGTH_SHORT).show()
+                        // ✅ MODIFIED: Updated error message
+                        Toast.makeText(context, "Please fill all required fields, including Grade Level.", Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.weight(1f)
