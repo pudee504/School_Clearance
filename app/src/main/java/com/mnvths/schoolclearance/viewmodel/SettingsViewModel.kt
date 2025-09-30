@@ -36,8 +36,8 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // This MUST have /api/ because of server.js
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/api/settings")
+                // ✅ UPDATED: This MUST have /api/ because of server.js
+                val response: HttpResponse = client.get("/api/settings")
                 if (response.status.isSuccess()) {
                     _settings.value = response.body()
                 }
@@ -56,8 +56,8 @@ class SettingsViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                // This MUST have /api/ because of server.js
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/api/settings") {
+                // ✅ UPDATED: This MUST have /api/ because of server.js
+                val response: HttpResponse = client.put("/api/settings") {
                     contentType(ContentType.Application.Json)
                     setBody(newSettings)
                 }

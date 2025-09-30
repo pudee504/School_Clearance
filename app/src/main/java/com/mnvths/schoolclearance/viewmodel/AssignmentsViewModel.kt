@@ -8,6 +8,7 @@ import com.mnvths.schoolclearance.data.AssignClassesRequest
 import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Subject
+import com.mnvths.schoolclearance.data.SubjectGroup
 import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -18,11 +19,9 @@ import kotlinx.coroutines.launch
 class AssignmentViewModel : ViewModel() {
     private val client = KtorClient.httpClient
 
-    // ✅ RENAMED: from signatories to subjects
     private val _subjects = mutableStateOf<List<Subject>>(emptyList())
     val subjects: State<List<Subject>> = _subjects
 
-    // ✅ RENAMED: from assignedSignatories to assignedSubjects
     private val _assignedSubjects = mutableStateOf<List<AssignedSubject>>(emptyList())
     val assignedSubjects: State<List<AssignedSubject>> = _assignedSubjects
 
@@ -35,14 +34,13 @@ class AssignmentViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
-    // ✅ RENAMED: Fetches all available Subjects
     fun fetchSubjects() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
                 // ✅ UPDATED: Endpoint to fetch subjects
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/subjects")
+                val response: HttpResponse = client.get("/subjects")
                 if (response.status.isSuccess()) {
                     _subjects.value = response.body()
                 } else {
@@ -56,13 +54,12 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    // ✅ RENAMED: Fetches subjects assigned to a specific signatory
     fun fetchAssignedSubjectsForSignatory(signatoryId: Int) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/assignments/signatory-subjects/$signatoryId")
+                // ✅ UPDATED to match your existing server route
+                val response: HttpResponse = client.get("/assignments/faculty-signatory/$signatoryId")
                 if (response.status.isSuccess()) {
                     _assignedSubjects.value = response.body()
                 } else {
@@ -76,13 +73,13 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    // This function is unchanged
     fun fetchAllClassSections() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/students/class-sections") // Assuming this is the correct full path
+                // ✅ UPDATED
+                val response: HttpResponse = client.get("/students/class-sections")
                 if (response.status.isSuccess()) {
                     val classSections: List<ClassSection> = response.body()
                     _sections.value = classSections
@@ -97,7 +94,6 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    // ✅ RENAMED: Assigns a subject to a signatory
     fun assignSubjectToSignatory(
         signatoryId: Int,
         subjectId: Int,
@@ -107,7 +103,7 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/assignments/assign-subject") {
+                val response: HttpResponse = client.post("/assignments/assign-subject") {
                     contentType(ContentType.Application.Json)
                     setBody(
                         mapOf(
@@ -128,7 +124,6 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    // ✅ UPDATED: Fetches sections assigned to a specific subject for a specific signatory
     fun fetchAssignedSections(
         signatoryId: Int,
         subjectId: Int,
@@ -138,7 +133,7 @@ class AssignmentViewModel : ViewModel() {
             try {
                 // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
                 val response: HttpResponse =
-                    client.get("http://10.0.2.2:3000/assignments/sections/$signatoryId/$subjectId")
+                    client.get("/assignments/sections/$signatoryId/$subjectId")
                 if (response.status.isSuccess()) {
                     val assigned: List<ClassSection> = response.body()
                     onResult(assigned)
@@ -151,7 +146,6 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    // ✅ RENAMED: Assigns multiple classes to a subject/signatory pair
     fun assignClassesToSubject(
         signatoryId: Int,
         subjectId: Int,
@@ -162,7 +156,7 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/assignments/assign-classes") {
+                val response: HttpResponse = client.post("/assignments/assign-classes") {
                     contentType(ContentType.Application.Json)
                     setBody(AssignClassesRequest(signatoryId, subjectId, sectionIds))
                 }
@@ -177,4 +171,40 @@ class AssignmentViewModel : ViewModel() {
             }
         }
     }
+
+    // ✅ THIS IS THE NEW FUNCTION THAT FIXES THE 'Unresolved reference' ERROR
+    fun assignMultipleSubjectsToSignatory(
+        signatoryId: Int,
+        subjects: List<Subject>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            var allSuccessful = true
+            for (subject in subjects) {
+                try {
+                    // ✅ ADD the "/assignments" prefix here
+                    val response: HttpResponse = client.post("/assignments/faculty-signatory") {
+                        contentType(ContentType.Application.Json)
+                        setBody(mapOf("signatoryId" to signatoryId, "subjectId" to subject.id))
+                    }
+                    if (!response.status.isSuccess()) {
+                        allSuccessful = false
+                        onError("Error assigning ${subject.name}.")
+                        break // Stop on the first error
+                    }
+                } catch (e: Exception) {
+                    allSuccessful = false
+                    onError("Network error while assigning ${subject.name}.")
+                    break // Stop on the first error
+                }
+            }
+
+            if (allSuccessful) {
+                onSuccess()
+                fetchAssignedSubjectsForSignatory(signatoryId)
+            }
+        }
+    }
+
 }

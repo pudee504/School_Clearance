@@ -1,3 +1,4 @@
+// file: viewmodel/AuthViewModel.kt
 package com.mnvths.schoolclearance.viewmodel
 
 import android.util.Log
@@ -22,6 +23,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class AuthViewModel : ViewModel() {
+    // This client is now configured with the dynamic base URL from ApiConfig
     private val client = KtorClient.httpClient
 
     private val _loggedInUser = mutableStateOf<LoggedInUser?>(null)
@@ -35,9 +37,11 @@ class AuthViewModel : ViewModel() {
 
     fun login(loginId: String, password: String) {
         viewModelScope.launch {
+            _loginError.value = null // Clear previous errors
             try {
-                // ✅ FIXED: The URL now points to the correct /auth/login route
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/auth/login") {
+                // ✅ UPDATED: The URL is now just the endpoint path.
+                // The base URL (http://<IP>:<PORT>) is added automatically by KtorClient.
+                val response: HttpResponse = client.post("/auth/login") {
                     contentType(ContentType.Application.Json)
                     setBody(mapOf("loginId" to loginId, "password" to password))
                 }
@@ -63,7 +67,8 @@ class AuthViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Login failed: ${e.stackTraceToString()}")
-                _loginError.value = "An error occurred: ${e.message}"
+                // Provide a more user-friendly error for network issues
+                _loginError.value = "Unable to connect to the server. Please check your network."
                 _isUserLoggedIn.value = false
             }
         }

@@ -53,63 +53,11 @@ fun DashboardNavGraph(
             startDestination = "signatoryList",
             route = "signatories_graph"
         ) {
-            composable("signatoryList") { SignatoryListScreen(navController = innerNavController) }
+            composable("signatoryList") {
+                SignatoryListScreen(navController = rootNavController)
+            }
             composable("addSignatory") { AddSignatoryScreen(navController = innerNavController) }
-            composable(
-                route = "signatoryDetails/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
-                arguments = listOf(
-                    navArgument("signatoryId") { type = NavType.IntType },
-                    navArgument("signatoryName") { type = NavType.StringType },
-                    navArgument("firstName") { type = NavType.StringType },
-                    navArgument("lastName") { type = NavType.StringType },
-                    navArgument("middleName") { type = NavType.StringType; nullable = true },
-                    navArgument("username") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                SignatoryDetailsScreen(
-                    navController = innerNavController,
-                    signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
-                    signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
-                    firstName = backStackEntry.arguments?.getString("firstName") ?: "",
-                    lastName = backStackEntry.arguments?.getString("lastName") ?: "",
-                    middleName = backStackEntry.arguments?.getString("middleName"),
-                    username = backStackEntry.arguments?.getString("username") ?: ""
-                )
-            }
-            composable(
-                route = "editSignatory/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
-                arguments = listOf(
-                    navArgument("signatoryId") { type = NavType.IntType },
-                    navArgument("signatoryName") { type = NavType.StringType },
-                    navArgument("firstName") { type = NavType.StringType },
-                    navArgument("lastName") { type = NavType.StringType },
-                    navArgument("middleName") { type = NavType.StringType; nullable = true },
-                    navArgument("username") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                EditSignatoryScreen(
-                    navController = innerNavController,
-                    signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
-                    signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
-                    firstName = backStackEntry.arguments?.getString("firstName") ?: "",
-                    lastName = backStackEntry.arguments?.getString("lastName") ?: "",
-                    middleName = backStackEntry.arguments?.getString("middleName"),
-                    username = backStackEntry.arguments?.getString("username") ?: ""
-                )
-            }
-            composable(
-                route = "assignSubjectToSignatory/{signatoryId}/{signatoryName}",
-                arguments = listOf(
-                    navArgument("signatoryId") { type = NavType.IntType },
-                    navArgument("signatoryName") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                AssignSubjectToSignatoryScreen(
-                    navController = innerNavController,
-                    signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
-                    signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
-                )
-            }
+
             composable(
                 route = "assignClassesToSubject/{signatoryId}/{signatoryName}/{subjectId}/{subjectName}",
                 arguments = listOf(

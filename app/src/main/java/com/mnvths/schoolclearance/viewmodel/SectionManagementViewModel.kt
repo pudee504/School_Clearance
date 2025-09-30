@@ -35,7 +35,6 @@ class SectionManagementViewModel : ViewModel() {
     val gradeLevels: StateFlow<List<String>> = _gradeLevels.asStateFlow()
 
     init {
-        // Automatically fetch data when the ViewModel is created
         fetchClassSections()
         fetchAllGradeLevels()
     }
@@ -45,7 +44,8 @@ class SectionManagementViewModel : ViewModel() {
             isLoading.value = true
             error.value = null
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/sections/class-sections")
+                // ✅ UPDATED
+                val response: HttpResponse = client.get("/sections/class-sections")
                 if (response.status.isSuccess()) {
                     _classSections.value = response.body()
                 } else {
@@ -62,9 +62,9 @@ class SectionManagementViewModel : ViewModel() {
     fun fetchAllGradeLevels() {
         viewModelScope.launch {
             try {
-                _gradeLevels.value = client.get("http://10.0.2.2:3000/sections/grade-levels").body()
+                // ✅ UPDATED
+                _gradeLevels.value = client.get("/sections/grade-levels").body()
             } catch (e: Exception) {
-                // This is a non-critical error, so we can log it or show a subtle message
                 println("Failed to fetch grade levels: ${e.message}")
             }
         }
@@ -78,14 +78,14 @@ class SectionManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/sections") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.post("/sections") {
                     contentType(ContentType.Application.Json)
-                    // Backend expects the grade level number and section name
                     setBody(AddSectionRequest(gradeLevel = gradeLevel, sectionName = sectionName))
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchClassSections() // Refresh the list after adding
+                    fetchClassSections()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
@@ -106,13 +106,14 @@ class SectionManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/sections/$sectionId") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.put("/sections/$sectionId") {
                     contentType(ContentType.Application.Json)
                     setBody(UpdateSectionRequest(gradeLevel = gradeLevel, sectionName = sectionName))
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchClassSections() // Refresh the list after updating
+                    fetchClassSections()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
@@ -131,10 +132,11 @@ class SectionManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/sections/$sectionId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.delete("/sections/$sectionId")
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchClassSections() // Refresh the list after deleting
+                    fetchClassSections()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")

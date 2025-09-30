@@ -31,8 +31,8 @@ class AccountViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // This API endpoint needs to be created on your server
-                val response: List<Account> = client.get("http://10.0.2.2:3000/accounts").body()
+                // ✅ UPDATED: This API endpoint needs to be created on your server
+                val response: List<Account> = client.get("/accounts").body()
                 _accounts.value = response.sortedBy { it.name }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"

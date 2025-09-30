@@ -38,7 +38,8 @@ class SignatoryViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/signatories")
+                // ✅ UPDATED
+                val response: HttpResponse = client.get("/signatories")
                 if (response.status.isSuccess()) {
                     val signatoryData: List<Signatory> = response.body()
                     _signatoryList.value = signatoryData
@@ -63,8 +64,8 @@ class SignatoryViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                // NOTE: This endpoint might live in your assignments.js route handler
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty/$signatoryId/signatory/$subjectId/section/$sectionId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.delete("/faculty/$signatoryId/signatory/$subjectId/section/$sectionId")
 
                 if (response.status.isSuccess()) {
                     onSuccess()
@@ -83,8 +84,8 @@ class SignatoryViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // NOTE: This endpoint name is now potentially confusing and might need to be updated in your backend routes (e.g., /assignments/signatory/:signatoryId/subjects)
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory/$signatoryId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.get("/faculty-signatory/$signatoryId")
                 if (response.status.isSuccess()) {
                     val subjects: List<AssignedSubject> = response.body()
                     _assignedSubjects.value = subjects
@@ -104,8 +105,8 @@ class SignatoryViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                // NOTE: This endpoint name is now potentially confusing
-                val response: HttpResponse = client.get("http://10.0.2.2:3000/faculty-signatory-sections/$signatoryId/$subjectId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.get("/faculty-signatory-sections/$signatoryId/$subjectId")
                 if (response.status.isSuccess()) {
                     val sections: List<ClassSection> = response.body()
                     _assignedSections.value = _assignedSections.value + (subjectId to sections)
@@ -124,8 +125,8 @@ class SignatoryViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 Log.d("SignatoryViewModel", "Attempting to delete subject $subjectId for signatory $signatoryId")
-                // NOTE: This endpoint name is now potentially confusing
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/faculty-signatory/$signatoryId/$subjectId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.delete("/faculty-signatory/$signatoryId/$subjectId")
                 if (response.status.isSuccess()) {
                     fetchAssignedSubjects(signatoryId)
                 } else {
@@ -150,7 +151,8 @@ class SignatoryViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/signatories") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.post("/signatories") {
                     contentType(ContentType.Application.Json)
                     setBody(
                         mapOf(
@@ -178,7 +180,8 @@ class SignatoryViewModel : ViewModel() {
     fun deleteSignatory(id: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/signatories/$id")
+                // ✅ UPDATED
+                val response: HttpResponse = client.delete("/signatories/$id")
                 if (response.status.isSuccess()) {
                     onSuccess()
                     fetchSignatoryList()
@@ -213,7 +216,8 @@ class SignatoryViewModel : ViewModel() {
                     bodyMap["password"] = password
                 }
 
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/signatories/${id}") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.put("/signatories/${id}") {
                     contentType(ContentType.Application.Json)
                     setBody(bodyMap)
                 }

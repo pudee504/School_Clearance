@@ -7,8 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,99 +47,79 @@ fun SignatoryListScreen(
                 it.lastName.contains(searchQuery, ignoreCase = true)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Button(
-            onClick = { navController.navigate("addSignatory") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add New Signatory")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Add New Signatory")
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Manage Signatories") })
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate("addSignatory") }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add New Signatory")
+            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Search Signatories") },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = "Search"
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search Signatories") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Search,
+                        contentDescription = "Search"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Error: $error\nPlease check your server and network connection.",
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(filteredSignatoryList) { signatory ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        val middleName = signatory.middleName ?: "null"
-                                        val username = signatory.username ?: "null"
-                                        navController.navigate("signatoryDetails/${signatory.id}/${signatory.name}/${signatory.firstName}/${signatory.lastName}/${middleName}/${username}")
-                                    }
-                            ) {
-                                Text(text = "ID: ${signatory.id}", style = MaterialTheme.typography.bodySmall)
-                                Text(text = signatory.name, style = MaterialTheme.typography.titleLarge)
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (error != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Error: $error\nPlease check your server and network connection.",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredSignatoryList) { signatory ->
+                        SignatoryListItem(
+                            signatory = signatory,
+                            onViewDetails = {
+                                val middleName = signatory.middleName ?: "null"
+                                val username = signatory.username ?: "null"
+                                navController.navigate("signatoryDetails/${signatory.id}/${signatory.name}/${signatory.firstName}/${signatory.lastName}/${middleName}/${username}")
+                            },
+                            onEdit = {
+                                val middleName = signatory.middleName ?: "null"
+                                val username = signatory.username ?: "null"
+                                navController.navigate("editSignatory/${signatory.id}/${signatory.name}/${signatory.firstName}/${signatory.lastName}/${middleName}/${username}")
+                            },
+                            onDelete = {
+                                signatoryToDelete = signatory
+                                showDeleteDialog = true
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = {
-                                    val middleName = signatory.middleName ?: "null"
-                                    val username = signatory.username ?: "null"
-                                    navController.navigate("editSignatory/${signatory.id}/${signatory.name}/${signatory.firstName}/${signatory.lastName}/${middleName}/${username}")
-                                }) {
-                                    Icon(Icons.Filled.Edit, contentDescription = "Edit Signatory")
-                                }
-                                IconButton(onClick = {
-                                    signatoryToDelete = signatory
-                                    showDeleteDialog = true
-                                }) {
-                                    Icon(Icons.Filled.Delete, contentDescription = "Delete Signatory", tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
+                        )
                     }
                 }
             }
@@ -197,5 +176,57 @@ fun SignatoryListScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun SignatoryListItem(
+    signatory: Signatory,
+    onViewDetails: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onViewDetails)
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = signatory.name,
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = {
+                            onEdit()
+                            menuExpanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            onDelete()
+                            menuExpanded = false
+                        }
+                    )
+                }
+            }
+        }
     }
 }

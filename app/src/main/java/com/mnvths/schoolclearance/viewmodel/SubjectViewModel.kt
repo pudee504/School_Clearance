@@ -22,10 +22,8 @@ class SubjectViewModel : ViewModel() {
     private val _subjects = mutableStateOf<List<Subject>>(emptyList())
     val subjects: State<List<Subject>> = _subjects
 
-    // ✅ START: New state for the grouped curriculum list
     private val _groupedSubjects = mutableStateOf<List<SubjectGroup>>(emptyList())
     val groupedSubjects: State<List<SubjectGroup>> = _groupedSubjects
-    // ✅ END: New state
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -37,19 +35,17 @@ class SubjectViewModel : ViewModel() {
         fetchSubjects()
     }
 
-    // ✅ START: New function to fetch and process grouped subjects
-    // ✅ MODIFIED a function to implement the new grouping logic
     fun fetchGroupedSubjects() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val response: CurriculumResponse = client.get("http://10.0.2.2:3000/subjects/curriculum").body()
+                // ✅ UPDATED
+                val response: CurriculumResponse = client.get("/subjects/curriculum").body()
                 val activeSem = response.activeSemester.toIntOrNull() ?: 1
 
                 val allGroups = mutableListOf<SubjectGroup>()
 
-                // JHS Grouping (no change)
                 response.subjects
                     .filter { it.gradeLevelId != null && it.gradeLevelId <= 4 }
                     .groupBy { it.gradeLevel!! }
@@ -58,29 +54,24 @@ class SubjectViewModel : ViewModel() {
                         allGroups.add(SubjectGroup(gradeLevel, subjects))
                     }
 
-                // ✅ START: New logic for SHS Grouping
                 val shsSubjectsByGrade = response.subjects
                     .filter { it.gradeLevelId != null && it.gradeLevelId > 4 && it.semester == activeSem }
                     .groupBy { it.gradeLevel!! }
                     .toSortedMap()
 
                 shsSubjectsByGrade.forEach { (gradeLevel, subjects) ->
-                    // This block processes the list to handle duplicates and identify specialized subjects
                     val subjectsGroupedById = subjects.groupBy { it.subjectId }
 
                     val uniqueSubjects = subjectsGroupedById.map { (_, subjectList) ->
-                        // If a subject appears more than once, it's a Core/Applied subject. Don't show a strand.
                         if (subjectList.size > 1) {
                             subjectList.first().copy(strandName = null)
                         } else {
-                            // If it appears only once, it's specialized. Keep the strand name.
                             subjectList.first()
                         }
-                    }.sortedBy { it.display_order } // Re-sort after processing
+                    }.sortedBy { it.display_order }
 
                     allGroups.add(SubjectGroup("$gradeLevel - Semester $activeSem", uniqueSubjects))
                 }
-                // ✅ END: New logic for SHS Grouping
 
                 _groupedSubjects.value = allGroups
 
@@ -91,7 +82,6 @@ class SubjectViewModel : ViewModel() {
             }
         }
     }
-    // ✅ END: New fetch function
 
 
     fun fetchSubjects() {
@@ -99,8 +89,8 @@ class SubjectViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ Fetches from the correct '/subjects' endpoint
-                val response: List<Subject> = client.get("http://10.0.2.2:3000/subjects").body()
+                // ✅ UPDATED: Fetches from the correct '/subjects' endpoint
+                val response: List<Subject> = client.get("/subjects").body()
                 _subjects.value = response.sortedBy { it.name }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
@@ -113,7 +103,8 @@ class SubjectViewModel : ViewModel() {
     fun addSubject(name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = client.post("http://10.0.2.2:3000/subjects") {
+                // ✅ UPDATED
+                val response = client.post("/subjects") {
                     contentType(ContentType.Application.Json)
                     setBody(AddSubjectRequest(name))
                 }
@@ -132,7 +123,8 @@ class SubjectViewModel : ViewModel() {
     fun updateSubject(id: Int, name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = client.put("http://10.0.2.2:3000/subjects/$id") {
+                // ✅ UPDATED
+                val response = client.put("/subjects/$id") {
                     contentType(ContentType.Application.Json)
                     setBody(AddSubjectRequest(name))
                 }
@@ -151,7 +143,8 @@ class SubjectViewModel : ViewModel() {
     fun deleteSubject(id: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = client.delete("http://10.0.2.2:3000/subjects/$id")
+                // ✅ UPDATED
+                val response = client.delete("/subjects/$id")
                 if (response.status.isSuccess()) {
                     onSuccess()
                     fetchSubjects() // Refresh list

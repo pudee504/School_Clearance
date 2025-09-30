@@ -150,6 +150,65 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
             AddSectionScreen(navController = navController)
         }
 
+        // ✅ ADD THIS NEW ROUTE for the full-screen signatory details page
+        composable(
+            route = "signatoryDetails/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType },
+                navArgument("firstName") { type = NavType.StringType },
+                navArgument("lastName") { type = NavType.StringType },
+                navArgument("middleName") { type = NavType.StringType; nullable = true },
+                navArgument("username") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            SignatoryDetailsScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
+                // Note: firstName, lastName, middleName are passed but not used on the screen
+                // They are kept here to match the navigation call from SignatoryListScreen
+                username = backStackEntry.arguments?.getString("username") ?: ""
+            )
+        }
+
+        // ✅ ADD THIS NEW ROUTE for assigning subjects
+        composable(
+            route = "assignSubjectToSignatory/{signatoryId}/{signatoryName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignSubjectToSignatoryScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+            )
+        }
+
+        composable(
+            route = "editSignatory/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType },
+                navArgument("firstName") { type = NavType.StringType },
+                navArgument("lastName") { type = NavType.StringType },
+                navArgument("middleName") { type = NavType.StringType; nullable = true },
+                navArgument("username") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            EditSignatoryScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
+                firstName = backStackEntry.arguments?.getString("firstName") ?: "",
+                lastName = backStackEntry.arguments?.getString("lastName") ?: "",
+                middleName = backStackEntry.arguments?.getString("middleName"),
+                username = backStackEntry.arguments?.getString("username") ?: ""
+            )
+        }
+
         composable(
             "editSection/{sectionId}/{gradeLevel}/{sectionName}",
             arguments = listOf(

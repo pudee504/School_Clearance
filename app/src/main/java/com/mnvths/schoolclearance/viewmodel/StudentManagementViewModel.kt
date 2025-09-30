@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
-// This is the data class for the new endpoint's response
 @Serializable
 data class StudentInSection(
     val id: String,
@@ -30,7 +29,6 @@ data class StudentInSection(
     val lastName: String
 )
 
-// Data class for the assign students request body
 @Serializable
 data class AssignStudentsRequest(
     val sectionId: Int,
@@ -68,7 +66,6 @@ class StudentManagementViewModel : ViewModel() {
     private val _specializations = MutableStateFlow<List<Specialization>>(emptyList())
     val specializations: StateFlow<List<Specialization>> = _specializations.asStateFlow()
 
-    // State for students in a specific section
     private val _studentsInSection = MutableStateFlow<List<StudentInSection>>(emptyList())
     val studentsInSection: StateFlow<List<StudentInSection>> = _studentsInSection.asStateFlow()
 
@@ -80,7 +77,6 @@ class StudentManagementViewModel : ViewModel() {
         fetchShsStrands()
     }
 
-    // ✅ ADD THIS NEW FUNCTION
     fun unassignStudentFromSection(
         studentId: String,
         onSuccess: () -> Unit,
@@ -89,10 +85,10 @@ class StudentManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             try {
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/unassign/$studentId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.put("/students/unassign/$studentId")
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    // Refresh the main student list because one student is now unassigned
                     fetchAllStudents()
                 } else {
                     val errorBody = response.bodyAsText()
@@ -107,8 +103,6 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
-
-    // ✅ ADD THIS FUNCTION
     fun assignStudentsToSection(
         sectionId: Int,
         studentIds: List<String>,
@@ -123,13 +117,14 @@ class StudentManagementViewModel : ViewModel() {
             isLoading.value = true
             try {
                 val requestBody = AssignStudentsRequest(sectionId, studentIds)
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/assign-section") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.put("/students/assign-section") {
                     contentType(ContentType.Application.Json)
                     setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchAllStudents() // Refresh the main student list so they are no longer "unassigned"
+                    fetchAllStudents()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
@@ -143,14 +138,13 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
-
-    // This function fetches students by their section
     fun fetchStudentsBySection(sectionId: Int) {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
             try {
-                _studentsInSection.value = client.get("http://10.0.2.2:3000/students/section/$sectionId").body()
+                // ✅ UPDATED
+                _studentsInSection.value = client.get("/students/section/$sectionId").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
             } finally {
@@ -159,39 +153,43 @@ class StudentManagementViewModel : ViewModel() {
         }
     }
 
-    // This function clears the list when the user navigates away
     fun clearStudentsInSection() {
         _studentsInSection.value = emptyList()
     }
 
     fun fetchGradeLevels() = viewModelScope.launch {
         try {
-            _gradeLevels.value = client.get("http://10.0.2.2:3000/curriculum/grade-levels").body()
+            // ✅ UPDATED
+            _gradeLevels.value = client.get("/curriculum/grade-levels").body()
         } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
     }
 
     fun fetchClassSections() = viewModelScope.launch {
         try {
-            _classSections.value = client.get("http://10.0.2.2:3000/curriculum/sections").body()
+            // ✅ UPDATED
+            _classSections.value = client.get("/curriculum/sections").body()
         } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
     }
 
     fun fetchShsTracks() = viewModelScope.launch {
         try {
-            _shsTracks.value = client.get("http://10.0.2.2:3000/curriculum/shs-tracks").body()
+            // ✅ UPDATED
+            _shsTracks.value = client.get("/curriculum/shs-tracks").body()
         } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
     }
 
     fun fetchShsStrands() = viewModelScope.launch {
         try {
-            _shsStrands.value = client.get("http://10.0.2.2:3000/curriculum/shs-strands").body()
+            // ✅ UPDATED
+            _shsStrands.value = client.get("/curriculum/shs-strands").body()
         } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
     }
 
     fun fetchSpecializations(gradeLevelId: Int? = null, strandId: Int? = null) = viewModelScope.launch {
         isLoading.value = true
         try {
-            var url = "http://10.0.2.2:3000/curriculum/specializations"
+            // ✅ UPDATED
+            var url = "/curriculum/specializations"
             val params = mutableListOf<String>()
             if (gradeLevelId != null) params.add("gradeLevelId=$gradeLevelId")
             if (strandId != null) params.add("strandId=$strandId")
@@ -214,7 +212,8 @@ class StudentManagementViewModel : ViewModel() {
             isLoading.value = true
             error.value = null
             try {
-                _students.value = client.get("http://10.0.2.2:3000/students").body()
+                // ✅ UPDATED
+                _students.value = client.get("/students").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
             } finally {
@@ -244,8 +243,8 @@ class StudentManagementViewModel : ViewModel() {
                     sectionId = sectionId, strandId = strandId,
                     specializationId = specializationId
                 )
-
-                val response: HttpResponse = client.post("http://10.0.2.2:3000/students") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.post("/students") {
                     contentType(ContentType.Application.Json)
                     setBody(requestBody)
                 }
@@ -267,7 +266,8 @@ class StudentManagementViewModel : ViewModel() {
     fun deleteStudent(studentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.delete("http://10.0.2.2:3000/students/$studentId")
+                // ✅ UPDATED
+                val response: HttpResponse = client.delete("/students/$studentId")
                 if (response.status.isSuccess()) {
                     onSuccess()
                     fetchAllStudents()
@@ -286,7 +286,8 @@ class StudentManagementViewModel : ViewModel() {
             _studentDetails.value = null
             error.value = null
             try {
-                _studentDetails.value = client.get("http://10.0.2.2:3000/students/$studentId").body()
+                // ✅ UPDATED
+                _studentDetails.value = client.get("/students/$studentId").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
             } finally {
@@ -304,7 +305,8 @@ class StudentManagementViewModel : ViewModel() {
             isLoading.value = true
             error.value = null
             try {
-                _adminStudentProfile.value = client.get("http://10.0.2.2:3000/students/admin-profile/$studentId").body()
+                // ✅ UPDATED
+                _adminStudentProfile.value = client.get("/students/admin-profile/$studentId").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
             } finally {
@@ -323,7 +325,8 @@ class StudentManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/$originalStudentId") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.put("/students/$originalStudentId") {
                     contentType(ContentType.Application.Json)
                     setBody(updatedDetails)
                 }
@@ -357,12 +360,13 @@ class StudentManagementViewModel : ViewModel() {
                     term = profile.activeTerm.termNumber,
                     isCleared = isCleared
                 )
-                val response: HttpResponse = client.put("http://10.0.2.2:3000/students/clearance/status") {
+                // ✅ UPDATED
+                val response: HttpResponse = client.put("/students/clearance/status") {
                     contentType(ContentType.Application.Json)
                     setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
-                    fetchAdminStudentProfile(profile.id) // Refetch data on success
+                    fetchAdminStudentProfile(profile.id)
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
