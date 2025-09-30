@@ -1,21 +1,24 @@
 package com.mnvths.schoolclearance.screen
 
+
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert // ✅ Import for the "..." icon
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.mnvths.schoolclearance.data.AssignedItem
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,11 +30,50 @@ fun SignatoryDetailsScreen(
     username: String,
     viewModel: SignatoryViewModel = viewModel()
 ) {
-    val assignedSubjects by viewModel.assignedSubjects
+    val context = LocalContext.current
+    val assignedItems by viewModel.assignedItems
     val isLoading by viewModel.isLoading
 
-    LaunchedEffect(signatoryId) {
-        viewModel.fetchAssignedSubjects(signatoryId)
+    var showDialog by remember { mutableStateOf(false) }
+    var itemToUnassign by remember { mutableStateOf<AssignedItem?>(null) }
+
+    // ✅ State to manage which item's menu is expanded
+    var expandedMenuId by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(key1 = signatoryId) {
+        viewModel.fetchAssignedItems(signatoryId)
+    }
+
+    if (showDialog && itemToUnassign != null) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Confirm Unassignment") },
+            text = { Text("Are you sure you want to unassign '${itemToUnassign!!.name}'?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.unassignItem(
+                            assignmentId = itemToUnassign!!.assignmentId,
+                            onSuccess = {
+                                Toast.makeText(context, "Item unassigned", Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { errorMsg ->
+                                Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                        showDialog = false
+                        itemToUnassign = null
+                    }
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -48,10 +90,10 @@ fun SignatoryDetailsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    navController.navigate("assignSubjectToSignatory/$signatoryId/$signatoryName")
+                    navController.navigate("assignItemToSignatory/$signatoryId/$signatoryName")
                 }
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Assign New Subject")
+                Icon(Icons.Filled.Add, contentDescription = "Assign New Item")
             }
         }
     ) { paddingValues ->
@@ -61,7 +103,6 @@ fun SignatoryDetailsScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Signatory Information
             Text(signatoryName, style = MaterialTheme.typography.headlineMedium)
             Text(
                 text = "Username: $username",
@@ -71,9 +112,8 @@ fun SignatoryDetailsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-            // Assigned Subjects List
             Text(
-                text = "Assigned Subjects",
+                text = "Assigned Items",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -83,19 +123,55 @@ fun SignatoryDetailsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (assignedSubjects.isEmpty()) {
+            } else if (assignedItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No subjects have been assigned yet.")
+                    Text("No items have been assigned yet.")
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(assignedSubjects) { subject ->
+                    items(assignedItems, key = { it.assignmentId }) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = subject.subjectName,
-                                modifier = Modifier.padding(16.dp),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = item.name,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        text = item.type,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                // ✅ IconButton is now wrapped in a Box to anchor the menu
+                                Box {
+                                    IconButton(onClick = { expandedMenuId = item.assignmentId }) {
+                                        Icon(
+                                            Icons.Default.MoreVert,
+                                            contentDescription = "More options"
+                                        )
+                                    }
+
+                                    // ✅ DropdownMenu that shows when the icon is clicked
+                                    DropdownMenu(
+                                        expanded = expandedMenuId == item.assignmentId,
+                                        onDismissRequest = { expandedMenuId = null }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Unassign") },
+                                            onClick = {
+                                                itemToUnassign = item
+                                                showDialog = true
+                                                expandedMenuId = null // Close the menu
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

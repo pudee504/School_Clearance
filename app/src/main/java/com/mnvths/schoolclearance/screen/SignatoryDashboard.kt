@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -29,13 +30,12 @@ import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun SignatoryDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavController) { // ✅ RENAMED
+fun SignatoryDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavController) {
     val signatoryNavController = rememberNavController()
 
-    // ✅ Use 'signatory_main' for internal routes
     NavHost(navController = signatoryNavController, startDestination = "signatory_main") {
         composable("signatory_main") {
-            SignatoryMainScreen( // ✅ RENAMED
+            SignatoryMainScreen(
                 user = user,
                 onSignOut = onSignOut,
                 navController = signatoryNavController
@@ -65,25 +65,27 @@ fun SignatoryDashboard(user: OtherUser, onSignOut: () -> Unit, navController: Na
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SignatoryMainScreen( // ✅ RENAMED
+private fun SignatoryMainScreen(
     user: OtherUser,
     onSignOut: () -> Unit,
     navController: NavHostController,
     viewModel: SignatoryViewModel = viewModel()
 ) {
-    val assignedSubjects by viewModel.assignedSubjects
+    // ✅ Use the corrected properties from the ViewModel
+    val assignedItems by viewModel.assignedItems
     val assignedSections by viewModel.assignedSections
     val isLoading by viewModel.isLoading
-    var expandedSubjectId by remember { mutableStateOf<Int?>(null) }
+    var expandedItemId by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(user.id) {
-        viewModel.fetchAssignedSubjects(user.id)
+        // ✅ Call the corrected function
+        viewModel.fetchAssignedItems(user.id)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Signatory Dashboard") }, // ✅ RENAMED
+                title = { Text("Signatory Dashboard") },
                 actions = {
                     IconButton(onClick = onSignOut) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Sign Out")
@@ -102,65 +104,80 @@ private fun SignatoryMainScreen( // ✅ RENAMED
             Text(text = "Name: ${user.name}", style = MaterialTheme.typography.headlineSmall)
             Text(text = "ID: ${user.id}", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "My Assigned Subjects:", style = MaterialTheme.typography.titleLarge)
+            Text(text = "My Assigned Items:", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (assignedSubjects.isEmpty()) {
-                Text("You have no subjects assigned to you yet.")
+            } else if (assignedItems.isEmpty()) {
+                Text("You have no items assigned to you yet.")
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(assignedSubjects) { subject ->
+                    items(assignedItems, key = { it.assignmentId }) { item ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = subject.subjectName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(onClick = {
-                                        expandedSubjectId = if (expandedSubjectId == subject.subjectId) {
-                                            null
-                                        } else {
-                                            viewModel.fetchAssignedSections(user.id, subject.subjectId)
-                                            subject.subjectId
-                                        }
-                                    }) {
-                                        Icon(
-                                            if (expandedSubjectId == subject.subjectId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                            contentDescription = "Expand"
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        // ✅ Use item.name and display item.type
+                                        Text(
+                                            text = item.name,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            text = item.type,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Light
                                         )
                                     }
-                                }
-                                AnimatedVisibility(visible = expandedSubjectId == subject.subjectId) {
-                                    val sections = assignedSections[subject.subjectId]
-                                    when {
-                                        sections == null -> Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                                            CircularProgressIndicator()
+
+                                    // ✅ Only show the expand button if the item is a "Subject"
+                                    if (item.type == "Subject") {
+                                        IconButton(onClick = {
+                                            expandedItemId = if (expandedItemId == item.itemId) {
+                                                null
+                                            } else {
+                                                viewModel.fetchAssignedSections(user.id, item.itemId)
+                                                item.itemId
+                                            }
+                                        }) {
+                                            Icon(
+                                                if (expandedItemId == item.itemId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "Expand"
+                                            )
                                         }
-                                        sections.isEmpty() -> Text("No sections assigned.", modifier = Modifier.padding(top = 8.dp))
-                                        else -> {
-                                            Column(modifier = Modifier.padding(top = 8.dp)) {
-                                                sections.forEach { section ->
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clickable {
-                                                                navController.navigate("clearanceScreen/${section.sectionId}/${subject.subjectId}/${section.gradeLevel}/${section.sectionName}/${subject.subjectName}")
-                                                            }
-                                                            .padding(vertical = 8.dp, horizontal = 16.dp),
-                                                    ) {
-                                                        Text(text = "${section.gradeLevel} - ${section.sectionName}")
+                                    }
+                                }
+
+                                // ✅ Animated visibility now works for subjects only
+                                if (item.type == "Subject") {
+                                    AnimatedVisibility(visible = expandedItemId == item.itemId) {
+                                        val sections = assignedSections[item.itemId]
+                                        when {
+                                            sections == null -> Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                                CircularProgressIndicator()
+                                            }
+                                            sections.isEmpty() -> Text("No sections assigned.", modifier = Modifier.padding(top = 8.dp))
+                                            else -> {
+                                                Column(modifier = Modifier.padding(top = 8.dp)) {
+                                                    sections.forEach { section ->
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clickable {
+                                                                    navController.navigate("clearanceScreen/${section.sectionId}/${item.itemId}/${section.gradeLevel}/${section.sectionName}/${item.name}")
+                                                                }
+                                                                .padding(vertical = 8.dp, horizontal = 16.dp),
+                                                        ) {
+                                                            Text(text = "${section.gradeLevel} - ${section.sectionName}")
+                                                        }
                                                     }
                                                 }
                                             }

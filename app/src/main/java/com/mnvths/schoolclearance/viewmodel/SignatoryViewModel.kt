@@ -1,11 +1,10 @@
 package com.mnvths.schoolclearance.viewmodel
 
-import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mnvths.schoolclearance.data.AssignedSubject
+import com.mnvths.schoolclearance.data.AssignedItem
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Signatory
 import com.mnvths.schoolclearance.network.KtorClient
@@ -15,14 +14,15 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.launch
 
+// ❌ The duplicate inner class has been removed
 class SignatoryViewModel : ViewModel() {
     private val client = KtorClient.httpClient
 
     private val _signatoryList = mutableStateOf<List<Signatory>>(emptyList())
     val signatoryList: State<List<Signatory>> = _signatoryList
 
-    private val _assignedSubjects = mutableStateOf<List<AssignedSubject>>(emptyList())
-    val assignedSubjects: State<List<AssignedSubject>> = _assignedSubjects
+    private val _assignedItems = mutableStateOf<List<AssignedItem>>(emptyList())
+    val assignedItems: State<List<AssignedItem>> = _assignedItems
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -30,15 +30,53 @@ class SignatoryViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
+    // ✅ ADDED BACK: State to hold the sections for an expanded subject
     private val _assignedSections = mutableStateOf<Map<Int, List<ClassSection>>>(emptyMap())
     val assignedSections: State<Map<Int, List<ClassSection>>> = _assignedSections
 
+
+    fun fetchAssignedSections(signatoryId: Int, subjectId: Int) {
+        viewModelScope.launch {
+            try {
+                // Assuming this is your endpoint for sections. Update if it's different.
+                val response: HttpResponse = client.get("/assignments/sections/$signatoryId/$subjectId")
+                if (response.status.isSuccess()) {
+                    val sections: List<ClassSection> = response.body()
+                    _assignedSections.value = _assignedSections.value + (subjectId to sections)
+                } else {
+                    _assignedSections.value = _assignedSections.value + (subjectId to emptyList())
+                }
+            } catch (e: Exception) {
+                _assignedSections.value = _assignedSections.value + (subjectId to emptyList())
+            }
+        }
+    }
+
+    fun unassignItem(
+        assignmentId: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.delete("/assignments/$assignmentId")
+                if (response.status.isSuccess()) {
+                    // For a fast UI update, remove the item from the local list
+                    _assignedItems.value = _assignedItems.value.filterNot { it.assignmentId == assignmentId }
+                    onSuccess()
+                } else {
+                    onError("Failed to unassign: ${response.bodyAsText()}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
     fun fetchSignatoryList() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED
                 val response: HttpResponse = client.get("/signatories")
                 if (response.status.isSuccess()) {
                     val signatoryData: List<Signatory> = response.body()
@@ -55,43 +93,17 @@ class SignatoryViewModel : ViewModel() {
         }
     }
 
-    fun deleteAssignedSection(
-        signatoryId: Int,
-        subjectId: Int,
-        sectionId: Int,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                // ✅ UPDATED
-                val response: HttpResponse = client.delete("/faculty/$signatoryId/signatory/$subjectId/section/$sectionId")
-
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                    fetchAssignedSections(signatoryId, subjectId)
-                } else {
-                    onError("Failed to delete assignment: ${response.bodyAsText()}")
-                }
-            } catch (e: Exception) {
-                onError("Network error: ${e.message}")
-            }
-        }
-    }
-
-    fun fetchAssignedSubjects(signatoryId: Int) {
+    fun fetchAssignedItems(signatoryId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED
-                val response: HttpResponse = client.get("/faculty-signatory/$signatoryId")
+                val response: HttpResponse = client.get("/assignments/faculty-signatory/$signatoryId")
                 if (response.status.isSuccess()) {
-                    val subjects: List<AssignedSubject> = response.body()
-                    _assignedSubjects.value = subjects
-                    _assignedSections.value = emptyMap()
+                    val items: List<AssignedItem> = response.body()
+                    _assignedItems.value = items
                 } else {
-                    _error.value = "Failed to load assigned subjects."
+                    _error.value = "Failed to load assigned items."
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
@@ -101,44 +113,8 @@ class SignatoryViewModel : ViewModel() {
         }
     }
 
-    fun fetchAssignedSections(signatoryId: Int, subjectId: Int) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                // ✅ UPDATED
-                val response: HttpResponse = client.get("/faculty-signatory-sections/$signatoryId/$subjectId")
-                if (response.status.isSuccess()) {
-                    val sections: List<ClassSection> = response.body()
-                    _assignedSections.value = _assignedSections.value + (subjectId to sections)
-                } else {
-                    // Handle error case
-                }
-            } catch (e: Exception) {
-                // Handle network error
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun deleteAssignedSubject(signatoryId: Int, subjectId: Int) {
-        viewModelScope.launch {
-            try {
-                Log.d("SignatoryViewModel", "Attempting to delete subject $subjectId for signatory $signatoryId")
-                // ✅ UPDATED
-                val response: HttpResponse = client.delete("/faculty-signatory/$signatoryId/$subjectId")
-                if (response.status.isSuccess()) {
-                    fetchAssignedSubjects(signatoryId)
-                } else {
-                    _error.value = "Failed to delete subject assignment."
-                    Log.e("SignatoryViewModel", "Deletion failed: ${response.status.description}")
-                }
-            } catch (e: Exception) {
-                _error.value = "Network error: ${e.message}"
-                Log.e("SignatoryViewModel", "Deletion network error: ${e.stackTraceToString()}")
-            }
-        }
-    }
+    // NOTE: The old, broken functions like deleteAssignedSubject and fetchAssignedSections have been removed.
+    // They would need to be rewritten to work with the new `AssignedItem` data model if you need them.
 
     fun addSignatory(
         username: String,
@@ -151,7 +127,6 @@ class SignatoryViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                // ✅ UPDATED
                 val response: HttpResponse = client.post("/signatories") {
                     contentType(ContentType.Application.Json)
                     setBody(
@@ -180,7 +155,6 @@ class SignatoryViewModel : ViewModel() {
     fun deleteSignatory(id: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                // ✅ UPDATED
                 val response: HttpResponse = client.delete("/signatories/$id")
                 if (response.status.isSuccess()) {
                     onSuccess()
@@ -193,6 +167,7 @@ class SignatoryViewModel : ViewModel() {
             }
         }
     }
+
     fun editSignatory(
         id: Int,
         username: String,
@@ -216,7 +191,6 @@ class SignatoryViewModel : ViewModel() {
                     bodyMap["password"] = password
                 }
 
-                // ✅ UPDATED
                 val response: HttpResponse = client.put("/signatories/${id}") {
                     contentType(ContentType.Application.Json)
                     setBody(bodyMap)

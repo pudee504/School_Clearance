@@ -173,17 +173,14 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
         }
 
         // ✅ ADD THIS NEW ROUTE for assigning subjects
-        composable(
-            route = "assignSubjectToSignatory/{signatoryId}/{signatoryName}",
-            arguments = listOf(
-                navArgument("signatoryId") { type = NavType.IntType },
-                navArgument("signatoryName") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            AssignSubjectToSignatoryScreen(
+        composable("assignItemToSignatory/{signatoryId}/{signatoryName}") { backStackEntry ->
+            val signatoryId = backStackEntry.arguments?.getString("signatoryId")?.toIntOrNull() ?: 0
+            val signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+
+            AssignItemToSignatoryScreen(
                 navController = navController,
-                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
-                signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+                signatoryId = signatoryId,
+                signatoryName = signatoryName
             )
         }
 

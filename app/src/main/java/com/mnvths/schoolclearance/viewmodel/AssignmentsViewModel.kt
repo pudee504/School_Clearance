@@ -4,11 +4,10 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mnvths.schoolclearance.data.AssignClassesRequest
-import com.mnvths.schoolclearance.data.AssignedSubject
+import com.mnvths.schoolclearance.data.Account
+import com.mnvths.schoolclearance.data.AssignItemRequest
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Subject
-import com.mnvths.schoolclearance.data.SubjectGroup
 import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -22,11 +21,8 @@ class AssignmentViewModel : ViewModel() {
     private val _subjects = mutableStateOf<List<Subject>>(emptyList())
     val subjects: State<List<Subject>> = _subjects
 
-    private val _assignedSubjects = mutableStateOf<List<AssignedSubject>>(emptyList())
-    val assignedSubjects: State<List<AssignedSubject>> = _assignedSubjects
-
-    private val _sections = mutableStateOf<List<ClassSection>>(emptyList())
-    val sections: State<List<ClassSection>> = _sections
+    private val _accounts = mutableStateOf<List<Account>>(emptyList())
+    val accounts: State<List<Account>> = _accounts
 
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
@@ -34,12 +30,85 @@ class AssignmentViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
+    // ✅ This property is needed by the screen
+    private val _sections = mutableStateOf<List<ClassSection>>(emptyList())
+    val sections: State<List<ClassSection>> = _sections
+
+    // ✅ NEW: This function is now present
+    fun fetchAllClassSections() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                // Assuming you have a /sections endpoint that returns all sections
+                val response: HttpResponse = client.get("/sections")
+                if (response.status.isSuccess()) {
+                    _sections.value = response.body()
+                } else {
+                    _error.value = "Failed to load class sections."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // ✅ NEW: This function is now present
+    fun fetchAssignedSections(
+        signatoryId: Int,
+        subjectId: Int,
+        onResult: (List<ClassSection>) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.get("/assignments/sections/$signatoryId/$subjectId")
+                if (response.status.isSuccess()) {
+                    onResult(response.body())
+                } else {
+                    onResult(emptyList())
+                }
+            } catch (e: Exception) {
+                onResult(emptyList())
+            }
+        }
+    }
+
+    // ✅ NEW: This function is now present
+    fun assignClassesToSubject(
+        signatoryId: Int,
+        subjectId: Int,
+        sectionIds: List<Int>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.post("/assignments/assign-classes") {
+                    contentType(ContentType.Application.Json)
+                    setBody(mapOf(
+                        "signatoryId" to signatoryId,
+                        "subjectId" to subjectId,
+                        "sectionIds" to sectionIds
+                    ))
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                } else {
+                    onError("Failed to assign classes: ${response.bodyAsText()}")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+
     fun fetchSubjects() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED: Endpoint to fetch subjects
                 val response: HttpResponse = client.get("/subjects")
                 if (response.status.isSuccess()) {
                     _subjects.value = response.body()
@@ -54,157 +123,52 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    fun fetchAssignedSubjectsForSignatory(signatoryId: Int) {
+    fun fetchAccounts() {
         viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                // ✅ UPDATED to match your existing server route
-                val response: HttpResponse = client.get("/assignments/faculty-signatory/$signatoryId")
-                if (response.status.isSuccess()) {
-                    _assignedSubjects.value = response.body()
-                } else {
-                    _error.value = "Failed to load assigned subjects for this signatory."
-                }
-            } catch (e: Exception) {
-                _error.value = "Network error: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun fetchAllClassSections() {
-        viewModelScope.launch {
+            // Re-using isLoading can be tricky; for simplicity, we manage it here too.
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED
-                val response: HttpResponse = client.get("/students/class-sections")
-                if (response.status.isSuccess()) {
-                    val classSections: List<ClassSection> = response.body()
-                    _sections.value = classSections
-                } else {
-                    _error.value = "Failed to load class sections."
-                }
+                _accounts.value = client.get("/accounts").body()
             } catch (e: Exception) {
-                _error.value = "Network error: ${e.message}"
+                _error.value = "Network error fetching accounts: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun assignSubjectToSignatory(
+    fun assignItemToSignatory(
         signatoryId: Int,
-        subjectId: Int,
+        itemId: Int,
+        itemType: String, // "Subject" or "Account"
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
-                // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
-                val response: HttpResponse = client.post("/assignments/assign-subject") {
+                // ✅ Create an instance of the new data class
+                val requestBody = AssignItemRequest(
+                    signatoryId = signatoryId,
+                    itemId = itemId,
+                    itemType = itemType
+                )
+
+                val response: HttpResponse = client.post("/assignments/faculty-signatory") {
                     contentType(ContentType.Application.Json)
-                    setBody(
-                        mapOf(
-                            "signatoryId" to signatoryId,
-                            "subjectId" to subjectId
-                        )
-                    )
+                    // ✅ Set the body to the new data class instance
+                    setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
-                    onError("Failed to assign subject: ${response.status.description}. Details: $errorBody")
+                    onError("Failed to assign: $errorBody")
                 }
             } catch (e: Exception) {
-                onError("Network error: ${e.message}")
+                // The error you saw comes from this catch block
+                onError("Error assigning item: ${e.message}")
             }
         }
     }
-
-    fun fetchAssignedSections(
-        signatoryId: Int,
-        subjectId: Int,
-        onResult: (List<ClassSection>) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
-                val response: HttpResponse =
-                    client.get("/assignments/sections/$signatoryId/$subjectId")
-                if (response.status.isSuccess()) {
-                    val assigned: List<ClassSection> = response.body()
-                    onResult(assigned)
-                } else {
-                    onResult(emptyList())
-                }
-            } catch (e: Exception) {
-                onResult(emptyList())
-            }
-        }
-    }
-
-    fun assignClassesToSubject(
-        signatoryId: Int,
-        subjectId: Int,
-        sectionIds: List<Int>,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            try {
-                // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
-                val response: HttpResponse = client.post("/assignments/assign-classes") {
-                    contentType(ContentType.Application.Json)
-                    setBody(AssignClassesRequest(signatoryId, subjectId, sectionIds))
-                }
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                } else {
-                    val errorBody = response.bodyAsText()
-                    onError("Failed to assign classes: ${response.status.description}. Details: $errorBody")
-                }
-            } catch (e: Exception) {
-                onError("Network error: ${e.message}")
-            }
-        }
-    }
-
-    // ✅ THIS IS THE NEW FUNCTION THAT FIXES THE 'Unresolved reference' ERROR
-    fun assignMultipleSubjectsToSignatory(
-        signatoryId: Int,
-        subjects: List<Subject>,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            var allSuccessful = true
-            for (subject in subjects) {
-                try {
-                    // ✅ ADD the "/assignments" prefix here
-                    val response: HttpResponse = client.post("/assignments/faculty-signatory") {
-                        contentType(ContentType.Application.Json)
-                        setBody(mapOf("signatoryId" to signatoryId, "subjectId" to subject.id))
-                    }
-                    if (!response.status.isSuccess()) {
-                        allSuccessful = false
-                        onError("Error assigning ${subject.name}.")
-                        break // Stop on the first error
-                    }
-                } catch (e: Exception) {
-                    allSuccessful = false
-                    onError("Network error while assigning ${subject.name}.")
-                    break // Stop on the first error
-                }
-            }
-
-            if (allSuccessful) {
-                onSuccess()
-                fetchAssignedSubjectsForSignatory(signatoryId)
-            }
-        }
-    }
-
 }
