@@ -52,14 +52,15 @@ data class Subject(
     val name: String
 )
 
-// ✅ ADD this new, more flexible data class
+// ✅ CORRECTED THIS DATA CLASS
 @Serializable
-data class AssignedItem(
-    val assignmentId: Int,
-    val itemId: Int,
-    val name: String,
-    val type: String // This will be "Subject" or "Account"
+data class AssignedSubject(
+    @SerialName("subjectId") // Changed from "signatoryId"
+    val subjectId: Int,
+    @SerialName("subjectName") // Changed from "signatoryName"
+    val subjectName: String
 )
+
 
 @Serializable
 data class ClassSection(
@@ -186,14 +187,6 @@ data class Account(
     val id: Int,
     @SerialName("accountName")
     val name: String
-)
-
-
-@Serializable
-data class AssignItemRequest(
-    val signatoryId: Int,
-    val itemId: Int,
-    val itemType: String
 )
 
 @Serializable

@@ -17,12 +17,12 @@ import com.mnvths.schoolclearance.screen.*
 @Composable
 fun DashboardNavGraph(
     innerNavController: NavHostController,
-    rootNavController: NavHostController,
+    rootNavController: NavHostController, // Pass the root controller in
     appSettings: AppSettings,
     modifier: Modifier = Modifier
 ) {
     NavHost(
-        navController = innerNavController,
+        navController = innerNavController, // This NavHost manages the content *inside* the tabs
         startDestination = "students_graph",
         modifier = modifier
     ) {
@@ -32,10 +32,9 @@ fun DashboardNavGraph(
             route = "students_graph"
         ) {
             composable("studentManagement") {
-                // This screen uses the root controller to navigate to top-level screens like "Add" or "Edit"
+                // Pass the rootNavController so it can navigate to fullscreen Add/Edit/Details
                 StudentManagementScreen(navController = rootNavController)
             }
-            // ✅ REMOVED: The "adminStudentDetail" composable was removed from this nested graph.
         }
 
         // --- Sections Graph ---
@@ -44,6 +43,7 @@ fun DashboardNavGraph(
             route = "sections_graph"
         ) {
             composable("sectionManagement") {
+                // Pass the rootNavController for launching fullscreen Add/Edit
                 SectionManagementScreen(rootNavController = rootNavController)
             }
         }
@@ -54,10 +54,14 @@ fun DashboardNavGraph(
             route = "signatories_graph"
         ) {
             composable("signatoryList") {
+                // ✅ Pass the rootNavController to handle all navigation actions (Add, Edit, Details)
                 SignatoryListScreen(navController = rootNavController)
             }
-            composable("addSignatory") { AddSignatoryScreen(navController = innerNavController) }
 
+            // ❌ REMOVE addSignatory, signatoryDetails, and editSignatory from this file.
+            // They are now correctly defined in AppNavigation.kt for fullscreen display.
+
+            // These routes are for actions taken *within* the Signatory role, so they can stay here.
             composable(
                 route = "assignClassesToSubject/{signatoryId}/{signatoryName}/{subjectId}/{subjectName}",
                 arguments = listOf(
@@ -74,6 +78,7 @@ fun DashboardNavGraph(
                     subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
                 )
             }
+
             composable(
                 "clearanceScreen/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
                 arguments = listOf(

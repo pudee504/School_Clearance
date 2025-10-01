@@ -92,13 +92,11 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
             }
         }
 
+        // --- FULLSCREEN STUDENT ROUTES ---
         composable("addStudent") {
             AddStudentScreen(navController = navController)
         }
 
-        // ✅ REMOVED the "addStudentToSection" route
-
-        // ✅ ADD THIS NEW ROUTE for assigning existing students
         composable(
             "assignStudent/{sectionId}",
             arguments = listOf(navArgument("sectionId") { type = NavType.IntType })
@@ -146,11 +144,34 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
             )
         }
 
+        // --- FULLSCREEN SECTION ROUTES ---
         composable("addSection") {
             AddSectionScreen(navController = navController)
         }
 
-        // ✅ ADD THIS NEW ROUTE for the full-screen signatory details page
+        composable(
+            "editSection/{sectionId}/{gradeLevel}/{sectionName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            EditSectionScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                initialGradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
+                initialSectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
+            )
+        }
+
+        // --- FULLSCREEN SIGNATORY ROUTES ---
+
+        // ✅ ADD THIS ROUTE FOR ADDING A SIGNATORY
+        composable("addSignatory") {
+            AddSignatoryScreen(navController = navController)
+        }
+
         composable(
             route = "signatoryDetails/{signatoryId}/{signatoryName}/{firstName}/{lastName}/{middleName}/{username}",
             arguments = listOf(
@@ -166,21 +187,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 navController = navController,
                 signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                 signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: "",
-                // Note: firstName, lastName, middleName are passed but not used on the screen
-                // They are kept here to match the navigation call from SignatoryListScreen
                 username = backStackEntry.arguments?.getString("username") ?: ""
-            )
-        }
-
-        // ✅ ADD THIS NEW ROUTE for assigning subjects
-        composable("assignItemToSignatory/{signatoryId}/{signatoryName}") { backStackEntry ->
-            val signatoryId = backStackEntry.arguments?.getString("signatoryId")?.toIntOrNull() ?: 0
-            val signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
-
-            AssignItemToSignatoryScreen(
-                navController = navController,
-                signatoryId = signatoryId,
-                signatoryName = signatoryName
             )
         }
 
@@ -207,18 +214,16 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
         }
 
         composable(
-            "editSection/{sectionId}/{gradeLevel}/{sectionName}",
+            route = "assignSubjectToSignatory/{signatoryId}/{signatoryName}",
             arguments = listOf(
-                navArgument("sectionId") { type = NavType.IntType },
-                navArgument("gradeLevel") { type = NavType.StringType },
-                navArgument("sectionName") { type = NavType.StringType }
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            EditSectionScreen(
+            AssignSubjectToSignatoryScreen(
                 navController = navController,
-                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
-                initialGradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
-                initialSectionName = backStackEntry.arguments?.getString("sectionName") ?: ""
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
             )
         }
     }
