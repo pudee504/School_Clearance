@@ -5,6 +5,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mnvths.schoolclearance.data.AssignedAccount
 import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Signatory
@@ -32,6 +33,52 @@ class SignatoryViewModel : ViewModel() {
 
     private val _assignedSections = mutableStateOf<Map<Int, List<ClassSection>>>(emptyMap())
     val assignedSections: State<Map<Int, List<ClassSection>>> = _assignedSections
+
+    // ✅ Add state for assigned accounts
+    private val _assignedAccounts = mutableStateOf<List<AssignedAccount>>(emptyList())
+    val assignedAccounts: State<List<AssignedAccount>> = _assignedAccounts
+
+    // ✅ NEW FUNCTION to unassign an account
+    fun unassignAccount(
+        signatoryId: Int,
+        accountId: Int,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.delete("/assignments/accounts/$signatoryId/$accountId")
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    fetchAssignedAccounts(signatoryId) // Refresh the list
+                } else {
+                    onError(response.bodyAsText())
+                }
+            } catch (e: Exception) {
+                onError(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    // ✅ NEW FUNCTION to fetch assigned accounts
+    fun fetchAssignedAccounts(signatoryId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val response: HttpResponse = client.get("/assignments/accounts/$signatoryId")
+                if (response.status.isSuccess()) {
+                    _assignedAccounts.value = response.body()
+                } else {
+                    _error.value = "Failed to load assigned accounts."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 
     // ✅ NEW FUNCTION to unassign a subject
     fun unassignSubject(

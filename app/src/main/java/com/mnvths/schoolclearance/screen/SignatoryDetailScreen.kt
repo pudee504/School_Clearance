@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.mnvths.schoolclearance.data.AssignedAccount
 import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 
@@ -32,16 +33,25 @@ fun SignatoryDetailsScreen(
 ) {
     val context = LocalContext.current
     val assignedSubjects by viewModel.assignedSubjects
+    // ✅ Get assigned accounts from the view model
+    val assignedAccounts by viewModel.assignedAccounts
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
-    // ✅ State for managing the confirmation dialog
-    var showConfirmDialog by remember { mutableStateOf(false) }
+    // ✅ State for managing the new assignment menu
+    var showAssignMenu by remember { mutableStateOf(false) }
+
+    // State for managing unassignment dialogs
+    var showUnassignSubjectDialog by remember { mutableStateOf(false) }
     var subjectToUnassign by remember { mutableStateOf<AssignedSubject?>(null) }
+    var showUnassignAccountDialog by remember { mutableStateOf(false) }
+    var accountToUnassign by remember { mutableStateOf<AssignedAccount?>(null) }
 
 
     LaunchedEffect(signatoryId) {
+        // ✅ Fetch both subjects and accounts when the screen loads
         viewModel.fetchAssignedSubjects(signatoryId)
+        viewModel.fetchAssignedAccounts(signatoryId)
     }
 
     Scaffold(
@@ -56,12 +66,33 @@ fun SignatoryDetailsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate("assignSubjectToSignatory/$signatoryId/$signatoryName")
+            // ✅ Wrap FAB in a Box to anchor the dropdown menu
+            Box {
+                FloatingActionButton(
+                    onClick = { showAssignMenu = true }
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Assign New")
                 }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Assign New Subject")
+
+                DropdownMenu(
+                    expanded = showAssignMenu,
+                    onDismissRequest = { showAssignMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Assign Subject") },
+                        onClick = {
+                            navController.navigate("assignSubjectToSignatory/$signatoryId/$signatoryName")
+                            showAssignMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Assign Account") },
+                        onClick = {
+                            navController.navigate("assignAccountToSignatory/$signatoryId/$signatoryName")
+                            showAssignMenu = false
+                        }
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -80,13 +111,6 @@ fun SignatoryDetailsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-            Text(
-                text = "Assigned Subjects",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -97,35 +121,71 @@ fun SignatoryDetailsScreen(
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center
                 )
-            } else if (assignedSubjects.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No subjects have been assigned yet.")
-                }
             } else {
+                // Using a Column with two LazyColumns for simplicity
+                // For very long lists, a single LazyColumn with different item types would be more performant
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(assignedSubjects) { subject ->
-                        SubjectListItem(
-                            subject = subject,
-                            onUnassignClicked = {
-                                subjectToUnassign = subject
-                                showConfirmDialog = true
-                            }
+                    // Assigned Subjects
+                    item {
+                        Text(
+                            text = "Assigned Subjects",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    if (assignedSubjects.isEmpty()) {
+                        item { Text("No subjects have been assigned yet.", modifier = Modifier.padding(bottom = 16.dp)) }
+                    } else {
+                        items(assignedSubjects) { subject ->
+                            SubjectListItem(
+                                subject = subject,
+                                onUnassignClicked = {
+                                    subjectToUnassign = subject
+                                    showUnassignSubjectDialog = true
+                                }
+                            )
+                        }
+                    }
+
+                    // Spacer between sections
+                    item {
+                        Divider(modifier = Modifier.padding(vertical = 16.dp))
+                    }
+
+                    // ✅ Assigned Accounts
+                    item {
+                        Text(
+                            text = "Assigned Accounts",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    if (assignedAccounts.isEmpty()) {
+                        item { Text("No accounts have been assigned yet.") }
+                    } else {
+                        items(assignedAccounts) { account ->
+                            AccountListItem(
+                                account = account,
+                                onUnassignClicked = {
+                                    accountToUnassign = account
+                                    showUnassignAccountDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    // ✅ Confirmation Dialog Composable
-    if (showConfirmDialog && subjectToUnassign != null) {
+    // Confirmation Dialog for Unassigning a Subject
+    if (showUnassignSubjectDialog && subjectToUnassign != null) {
         AlertDialog(
-            onDismissRequest = {
-                showConfirmDialog = false
-                subjectToUnassign = null
-            },
+            onDismissRequest = { showUnassignSubjectDialog = false },
             title = { Text("Confirm Unassignment") },
-            text = { Text("Are you sure you want to unassign '${subjectToUnassign?.subjectName}' from this signatory?") },
+            text = { Text("Are you sure you want to unassign '${subjectToUnassign?.subjectName}'?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -133,66 +193,71 @@ fun SignatoryDetailsScreen(
                             viewModel.unassignSubject(
                                 signatoryId = signatoryId,
                                 subjectId = it.subjectId,
-                                onSuccess = {
-                                    Toast.makeText(context, "Subject unassigned", Toast.LENGTH_SHORT).show()
-                                },
-                                onError = { errorMsg ->
-                                    Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
-                                }
+                                onSuccess = { Toast.makeText(context, "Subject unassigned", Toast.LENGTH_SHORT).show() },
+                                onError = { errorMsg -> Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show() }
                             )
                         }
-                        showConfirmDialog = false
-                        subjectToUnassign = null
+                        showUnassignSubjectDialog = false
                     }
-                ) {
-                    Text("Confirm", color = MaterialTheme.colorScheme.error)
-                }
+                ) { Text("Confirm", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
+            dismissButton = { TextButton(onClick = { showUnassignSubjectDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    // ✅ Confirmation Dialog for Unassigning an Account
+    if (showUnassignAccountDialog && accountToUnassign != null) {
+        AlertDialog(
+            onDismissRequest = { showUnassignAccountDialog = false },
+            title = { Text("Confirm Unassignment") },
+            text = { Text("Are you sure you want to unassign '${accountToUnassign?.accountName}'?") },
+            confirmButton = {
                 TextButton(
                     onClick = {
-                        showConfirmDialog = false
-                        subjectToUnassign = null
+                        accountToUnassign?.let {
+                            viewModel.unassignAccount(
+                                signatoryId = signatoryId,
+                                accountId = it.accountId,
+                                onSuccess = { Toast.makeText(context, "Account unassigned", Toast.LENGTH_SHORT).show() },
+                                onError = { errorMsg -> Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show() }
+                            )
+                        }
+                        showUnassignAccountDialog = false
                     }
-                ) {
-                    Text("Cancel")
-                }
-            }
+                ) { Text("Confirm", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showUnassignAccountDialog = false }) { Text("Cancel") } }
         )
     }
 }
 
-
-// ✅ Extracted list item into its own composable for clarity
 @Composable
 fun SubjectListItem(subject: AssignedSubject, onUnassignClicked: () -> Unit) {
     var menuExpanded by remember { mutableStateOf(false) }
-
     Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = subject.subjectName,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyLarge
-            )
+        Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text = subject.subjectName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Box {
-                IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More options") }
+                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("Unassign") }, onClick = { onUnassignClicked(); menuExpanded = false })
                 }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Unassign") },
-                        onClick = {
-                            onUnassignClicked()
-                            menuExpanded = false
-                        }
-                    )
+            }
+        }
+    }
+}
+
+// ✅ New Composable for displaying an assigned account item
+@Composable
+fun AccountListItem(account: AssignedAccount, onUnassignClicked: () -> Unit) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text = account.accountName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Box {
+                IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More options") }
+                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("Unassign") }, onClick = { onUnassignClicked(); menuExpanded = false })
                 }
             }
         }

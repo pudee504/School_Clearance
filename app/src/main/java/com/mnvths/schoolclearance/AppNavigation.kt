@@ -226,5 +226,19 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
             )
         }
+
+        composable(
+            route = "assignAccountToSignatory/{signatoryId}/{signatoryName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("signatoryName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignAccountToSignatoryScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+            )
+        }
     }
 }

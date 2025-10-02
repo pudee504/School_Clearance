@@ -266,3 +266,12 @@ data class SubjectGroup(
     val title: String,
     val subjects: List<CurriculumSubject>
 )
+
+// ✅ NEW DATA CLASS
+@Serializable
+data class AssignedAccount(
+    @SerialName("accountId")
+    val accountId: Int,
+    @SerialName("accountName")
+    val accountName: String
+)

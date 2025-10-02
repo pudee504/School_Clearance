@@ -4,7 +4,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mnvths.schoolclearance.data.Account
 import com.mnvths.schoolclearance.data.AssignClassesRequest
+import com.mnvths.schoolclearance.data.AssignedAccount
 import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Subject
@@ -14,6 +16,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 class AssignmentViewModel : ViewModel() {
@@ -34,7 +37,53 @@ class AssignmentViewModel : ViewModel() {
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
-    fun fetchSubjects() {
+
+    // ✅ Accounts
+    private val _accounts = mutableStateOf<List<Account>>(emptyList())
+    val accounts: State<List<Account>> = _accounts
+    private val _assignedAccounts = mutableStateOf<List<AssignedAccount>>(emptyList())
+    val assignedAccounts: State<List<AssignedAccount>> = _assignedAccounts
+
+
+    // ✅ --- NEW EFFICIENT FETCH FUNCTIONS ---
+
+    fun loadSubjectAssignmentData(signatoryId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                // This will run both launch blocks at the same time
+                // and wait for both to complete before continuing.
+                coroutineScope {
+                    launch { fetchSubjects() }
+                    launch { fetchAssignedSubjectsForSignatory(signatoryId) }
+                }
+            } catch (e: Exception) {
+                _error.value = "An unexpected error occurred: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadAccountAssignmentData(signatoryId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                coroutineScope {
+                    launch { fetchAccounts() }
+                    launch { fetchAssignedAccountsForSignatory(signatoryId) }
+                }
+            } catch (e: Exception) {
+                _error.value = "An unexpected error occurred: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private fun fetchSubjects() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -54,7 +103,7 @@ class AssignmentViewModel : ViewModel() {
         }
     }
 
-    fun fetchAssignedSubjectsForSignatory(signatoryId: Int) {
+    private fun fetchAssignedSubjectsForSignatory(signatoryId: Int) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
@@ -203,6 +252,78 @@ class AssignmentViewModel : ViewModel() {
             if (allSuccessful) {
                 onSuccess()
                 fetchAssignedSubjectsForSignatory(signatoryId)
+            }
+        }
+    }
+
+    // ✅ --- Account Functions ---
+    private fun fetchAccounts() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                // Assuming you have an /accounts endpoint from accounts.js
+                val response: HttpResponse = client.get("/accounts")
+                if (response.status.isSuccess()) {
+                    _accounts.value = response.body()
+                } else {
+                    _error.value = "Failed to load accounts."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private fun fetchAssignedAccountsForSignatory(signatoryId: Int) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val response: HttpResponse = client.get("/assignments/accounts/$signatoryId")
+                if (response.status.isSuccess()) {
+                    _assignedAccounts.value = response.body()
+                } else {
+                    _error.value = "Failed to load assigned accounts for this signatory."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun assignMultipleAccountsToSignatory(
+        signatoryId: Int,
+        accounts: List<Account>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            var allSuccessful = true
+            for (account in accounts) {
+                try {
+                    val response: HttpResponse = client.post("/assignments/accounts") {
+                        contentType(ContentType.Application.Json)
+                        setBody(mapOf("signatoryId" to signatoryId, "accountId" to account.id))
+                    }
+                    if (!response.status.isSuccess()) {
+                        allSuccessful = false
+                        onError("Error assigning ${account.name}.")
+                        break
+                    }
+                } catch (e: Exception) {
+                    allSuccessful = false
+                    onError("Network error while assigning ${account.name}.")
+                    break
+                }
+            }
+
+            if (allSuccessful) {
+                onSuccess()
+                fetchAssignedAccountsForSignatory(signatoryId)
             }
         }
     }

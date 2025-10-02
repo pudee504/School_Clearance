@@ -16,44 +16,42 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.mnvths.schoolclearance.data.Subject
+import com.mnvths.schoolclearance.data.Account
 import com.mnvths.schoolclearance.viewmodel.AssignmentViewModel
+import kotlin.collections.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssignSubjectToSignatoryScreen(
+fun AssignAccountToSignatoryScreen(
     navController: NavController,
     signatoryId: Int,
     signatoryName: String,
     viewModel: AssignmentViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val allSubjects by viewModel.subjects
-    val assignedSubjects by viewModel.assignedSubjects
+    val allAccounts by viewModel.accounts
+    val assignedAccounts by viewModel.assignedAccounts
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
-    val selectedSubjects = remember { mutableStateListOf<Subject>() }
-    // ✅ ADD state for the search query
+    val selectedAccounts = remember { mutableStateListOf<Account>() }
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        viewModel.loadSubjectAssignmentData(signatoryId)
+        viewModel.loadAccountAssignmentData(signatoryId)
     }
 
-    // First, get the list of subjects that are not yet assigned
-    val unassignedSubjects = remember(allSubjects, assignedSubjects) {
-        allSubjects.filter { allSub ->
-            assignedSubjects.none { it.subjectId == allSub.id }
+    val unassignedAccounts = remember(allAccounts, assignedAccounts) {
+        allAccounts.filter { allAcc ->
+            assignedAccounts.none { it.accountId == allAcc.id }
         }.sortedBy { it.name }
     }
 
-    // ✅ THEN, filter that list based on the search query
-    val filteredSubjects = remember(searchQuery, unassignedSubjects) {
+    val filteredAccounts = remember(searchQuery, unassignedAccounts) {
         if (searchQuery.isBlank()) {
-            unassignedSubjects
+            unassignedAccounts
         } else {
-            unassignedSubjects.filter {
+            unassignedAccounts.filter {
                 it.name.contains(searchQuery, ignoreCase = true)
             }
         }
@@ -62,7 +60,7 @@ fun AssignSubjectToSignatoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Assign Subjects to $signatoryName") },
+                title = { Text("Assign Accounts to $signatoryName") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -71,14 +69,14 @@ fun AssignSubjectToSignatoryScreen(
             )
         },
         floatingActionButton = {
-            if (selectedSubjects.isNotEmpty()) {
+            if (selectedAccounts.isNotEmpty()) {
                 FloatingActionButton(
                     onClick = {
-                        viewModel.assignMultipleSubjectsToSignatory(
+                        viewModel.assignMultipleAccountsToSignatory(
                             signatoryId = signatoryId,
-                            subjects = selectedSubjects.toList(),
+                            accounts = selectedAccounts.toList(),
                             onSuccess = {
-                                Toast.makeText(context, "Subjects assigned!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Accounts assigned!", Toast.LENGTH_SHORT).show()
                                 navController.popBackStack()
                             },
                             onError = { errorMsg ->
@@ -87,7 +85,7 @@ fun AssignSubjectToSignatoryScreen(
                         )
                     }
                 ) {
-                    Icon(Icons.Filled.Done, contentDescription = "Assign Selected Subjects")
+                    Icon(Icons.Filled.Done, contentDescription = "Assign Selected Accounts")
                 }
             }
         }
@@ -98,12 +96,10 @@ fun AssignSubjectToSignatoryScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-
-            // ✅ ADD the search bar UI
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Search Subjects") },
+                label = { Text("Search Accounts") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -116,14 +112,13 @@ fun AssignSubjectToSignatoryScreen(
                 }
                 error != null -> Text("Error: $error")
                 else -> {
-                    // ✅ UPDATE the LazyColumn to use the filtered list
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(filteredSubjects, key = { it.id }) { subject ->
-                            val isSelected = selectedSubjects.contains(subject)
+                        items(filteredAccounts, key = { it.id }) { account ->
+                            val isSelected = selectedAccounts.contains(account)
                             Card(
                                 onClick = {
-                                    if (isSelected) selectedSubjects.remove(subject)
-                                    else selectedSubjects.add(subject)
+                                    if (isSelected) selectedAccounts.remove(account)
+                                    else selectedAccounts.add(account)
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -132,7 +127,7 @@ fun AssignSubjectToSignatoryScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = subject.name,
+                                        text = account.name,
                                         style = MaterialTheme.typography.bodyLarge,
                                         modifier = Modifier.weight(1f)
                                     )
