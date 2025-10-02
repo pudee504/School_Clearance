@@ -304,5 +304,47 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 accountName = backStackEntry.arguments?.getString("accountName") ?: ""
             )
         }
+        // ✅ MODIFIED: This route now includes the gradeLevel parameter
+        composable(
+            route = "clearanceScreenAccount/{sectionId}/{accountId}/{sectionName}/{accountName}/{gradeLevel}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("accountId") { type = NavType.IntType },
+                navArgument("sectionName") { type = NavType.StringType },
+                navArgument("accountName") { type = NavType.StringType },
+                navArgument("gradeLevel") { type = NavType.StringType } // ✅ ADD THIS
+            )
+        ) { backStackEntry ->
+            ClearanceScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("accountId") ?: 0,
+                sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
+                subjectName = backStackEntry.arguments?.getString("accountName") ?: "",
+                gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "", // ✅ ADD THIS
+                isAccountClearance = true
+            )
+        }
+        // ✅ ADD THIS MISSING ROUTE DEFINITION FOR SUBJECTS
+        composable(
+            route = "clearanceScreen/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("subjectId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType },
+                navArgument("subjectName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            ClearanceScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
+                gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
+                sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                // We don't pass 'isAccountClearance', so it correctly defaults to 'false'
+            )
+        }
     }
 }

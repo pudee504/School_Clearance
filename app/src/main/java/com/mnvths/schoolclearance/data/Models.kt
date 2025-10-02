@@ -289,3 +289,11 @@ data class AssignSectionsToAccountRequest(
     val accountId: Int,
     val sectionIds: List<Int>
 )
+// Add this new data class inside the ViewModel file, or in your data package
+@Serializable
+data class ClearMultipleRequest(
+    val requirementId: Int,
+    val schoolYear: String,
+    val term: String,
+    val studentUserIds: List<Int>
+)

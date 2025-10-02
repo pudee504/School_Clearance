@@ -4,6 +4,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mnvths.schoolclearance.data.ClearMultipleRequest
 import com.mnvths.schoolclearance.data.StudentClearanceStatus
 import com.mnvths.schoolclearance.data.UpdateClearanceStatusRequest
 import com.mnvths.schoolclearance.network.KtorClient
@@ -43,8 +44,8 @@ class ClearanceViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED
-                val response: SignatoryClearanceResponse = client.get("/clearance/section/$sectionId/subject/$subjectId").body()
+                // ✅ UPDATED: The endpoint URL now matches our new backend route
+                val response: SignatoryClearanceResponse = client.get("/clearance/students/$sectionId/$subjectId").body()
 
                 _students.value = response.students
                 _schoolYear = response.schoolYear
@@ -71,6 +72,12 @@ class ClearanceViewModel : ViewModel() {
                 return@launch
             }
 
+            // Optimistic UI update for a snappy feel
+            val originalList = students.value
+            _students.value = students.value.map {
+                if (it.userId == userId) it.copy(isCleared = isCleared) else it
+            }
+
             try {
                 val requestBody = UpdateClearanceStatusRequest(
                     userId = userId,
@@ -79,30 +86,54 @@ class ClearanceViewModel : ViewModel() {
                     term = _term!!,
                     isCleared = isCleared
                 )
-                // ✅ UPDATED
-                val response: HttpResponse = client.put("/students/clearance/status") {
+                // ✅ UPDATED: Use the new POST route and correct HTTP method
+                val response: HttpResponse = client.post("/clearance/update") {
                     contentType(ContentType.Application.Json)
                     setBody(requestBody)
                 }
 
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    _students.value = _students.value.map {
-                        if (it.userId == userId) it.copy(isCleared = isCleared) else it
-                    }
                 } else {
+                    _students.value = originalList // Revert UI change on failure
                     onError("Failed to update status: ${response.bodyAsText()}")
                 }
             } catch (e: Exception) {
+                _students.value = originalList // Revert UI change on failure
                 onError("Network error: ${e.message}")
             }
         }
     }
 
-    fun clearAllNotClearedStudents(sectionId: Int, subjectId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    // ✅ NEW: Function to fetch students for an ACCOUNT clearance
+    fun fetchStudentClearanceStatusForAccount(sectionId: Int, accountId: Int) {
         viewModelScope.launch {
-            val notClearedStudents = _students.value.filter { !it.isCleared }
-            if (notClearedStudents.isEmpty()) {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                // This endpoint URL matches our new backend route
+                val response: SignatoryClearanceResponse = client.get("/clearance/students-account/$sectionId/$accountId").body()
+
+                _students.value = response.students
+                _schoolYear = response.schoolYear
+                _term = response.term
+                _requirementId = response.requirementId
+
+            } catch (e: Exception) {
+                _error.value = "Error fetching students: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun clearAllNotClearedStudents(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val notClearedStudentIds = _students.value
+                .filter { !it.isCleared }
+                .map { it.userId }
+
+            if (notClearedStudentIds.isEmpty()) {
                 onSuccess()
                 return@launch
             }
@@ -112,37 +143,29 @@ class ClearanceViewModel : ViewModel() {
                 return@launch
             }
 
-            var hasErrorOccurred = false
-            for (student in notClearedStudents) {
-                try {
-                    val requestBody = UpdateClearanceStatusRequest(
-                        userId = student.userId,
-                        requirementId = _requirementId!!,
-                        schoolYear = _schoolYear!!,
-                        term = _term!!,
-                        isCleared = true
-                    )
-                    // ✅ UPDATED
-                    val response: HttpResponse = client.put("/students/clearance/status") {
-                        contentType(ContentType.Application.Json)
-                        setBody(requestBody)
-                    }
-                    if (!response.status.isSuccess()) {
-                        hasErrorOccurred = true
-                        break
-                    }
-                } catch (e: Exception) {
-                    hasErrorOccurred = true
-                    break
-                }
-            }
+            try {
+                val requestBody = ClearMultipleRequest(
+                    requirementId = _requirementId!!,
+                    schoolYear = _schoolYear!!,
+                    term = _term!!,
+                    studentUserIds = notClearedStudentIds
+                )
 
-            if (hasErrorOccurred) {
-                onError("An error occurred while clearing all students.")
-            } else {
-                onSuccess()
+                val response: HttpResponse = client.post("/clearance/clear-multiple") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }
+
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                    // Manually update the local state for an instant UI refresh
+                    _students.value = _students.value.map { it.copy(isCleared = true) }
+                } else {
+                    onError("Failed to clear all students: ${response.bodyAsText()}")
+                }
+            } catch (e: Exception) {
+                onError("Network error during bulk clear: ${e.message}")
             }
-            fetchStudentClearanceStatus(sectionId, subjectId)
         }
     }
 }

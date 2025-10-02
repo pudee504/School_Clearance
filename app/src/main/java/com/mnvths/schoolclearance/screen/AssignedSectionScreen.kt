@@ -91,7 +91,16 @@ fun AssignedSectionsScreen(
                 else -> {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(sections, key = { it.sectionId }) { section ->
-                            SectionListItem(section = section)
+                            // ✅ UPDATE THIS PART
+                            SectionListItem(
+                                section = section,
+                                onClick = {
+                                    // This navigation call will now work correctly
+                                    navController.navigate(
+                                        "clearanceScreen/${section.sectionId}/${subjectId}/${section.gradeLevel}/${section.sectionName}/${subjectName}"
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -101,8 +110,11 @@ fun AssignedSectionsScreen(
 }
 
 @Composable
-fun SectionListItem(section: ClassSection) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+fun SectionListItem(section: ClassSection, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick // Make the card clickable
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

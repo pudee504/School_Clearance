@@ -28,6 +28,7 @@ fun ClearanceScreen(
     gradeLevel: String,
     sectionName: String,
     subjectName: String,
+    isAccountClearance: Boolean = false,
     viewModel: ClearanceViewModel = viewModel()
 ) {
     val students by viewModel.students
@@ -36,6 +37,10 @@ fun ClearanceScreen(
     val context = LocalContext.current
 
     var searchText by remember { mutableStateOf("") }
+    var showClearAllDialog by remember { mutableStateOf(false) }
+    var showStudentConfirmationDialog by remember { mutableStateOf(false) }
+    var pendingStudentChange by remember { mutableStateOf<Pair<StudentClearanceStatus, Boolean>?>(null) }
+
 
     val processedStudents = remember(students, searchText) {
         students
@@ -51,7 +56,78 @@ fun ClearanceScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.fetchStudentClearanceStatus(sectionId, subjectId)
+        if (isAccountClearance) {
+            viewModel.fetchStudentClearanceStatusForAccount(sectionId, subjectId) // subjectId here is actually the accountId
+        } else {
+            viewModel.fetchStudentClearanceStatus(sectionId, subjectId)
+        }
+    }
+
+    if (showClearAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearAllDialog = false },
+            title = { Text("Confirm Action") },
+            text = { Text("Are you sure you want to clear all remaining uncleared students?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearAllNotClearedStudents(
+                            onSuccess = {
+                                Toast.makeText(context, "All students cleared.", Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { errorMsg ->
+                                Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                        showClearAllDialog = false
+                    }
+                ) { Text("Confirm") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showClearAllDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showStudentConfirmationDialog && pendingStudentChange != null) {
+        val (student, newStatus) = pendingStudentChange!!
+        val actionText = if (newStatus) "clear" else "mark as not cleared"
+        val studentName = "${student.firstName} ${student.lastName}"
+
+        AlertDialog(
+            onDismissRequest = { showStudentConfirmationDialog = false },
+            title = { Text("Confirm Change") },
+            text = { Text("Are you sure you want to $actionText '$studentName'?") },
+            confirmButton = {
+                Button(onClick = {
+                    viewModel.updateStudentClearance(
+                        userId = student.userId,
+                        isCleared = newStatus,
+                        onSuccess = {
+                            val statusText = if (newStatus) "cleared" else "marked as not cleared"
+                            Toast.makeText(context, "${student.lastName} $statusText.", Toast.LENGTH_SHORT).show()
+                        },
+                        onError = { errorMsg ->
+                            Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                        }
+                    )
+                    showStudentConfirmationDialog = false
+                    pendingStudentChange = null
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = {
+                    showStudentConfirmationDialog = false
+                    pendingStudentChange = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -95,16 +171,7 @@ fun ClearanceScreen(
 
             Button(
                 onClick = {
-                    viewModel.clearAllNotClearedStudents(
-                        subjectId = subjectId,
-                        sectionId = sectionId,
-                        onSuccess = {
-                            Toast.makeText(context, "All students cleared.", Toast.LENGTH_SHORT).show()
-                        },
-                        onError = { errorMsg ->
-                            Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
-                        }
-                    )
+                    showClearAllDialog = true
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = students.any { !it.isCleared }
@@ -134,19 +201,8 @@ fun ClearanceScreen(
                         StudentClearanceItem(
                             student = student,
                             onStatusChange = { newStatus ->
-                                // ✅ FIXED: This function call is now updated to match the new ViewModel.
-                                // It no longer sends the unnecessary subjectId and sectionId.
-                                viewModel.updateStudentClearance(
-                                    userId = student.userId,
-                                    isCleared = newStatus,
-                                    onSuccess = {
-                                        val statusText = if (newStatus) "cleared" else "marked as not cleared"
-                                        Toast.makeText(context, "${student.lastName} $statusText.", Toast.LENGTH_SHORT).show()
-                                    },
-                                    onError = { errorMsg ->
-                                        Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
-                                    }
-                                )
+                                pendingStudentChange = student to newStatus
+                                showStudentConfirmationDialog = true
                             }
                         )
                     }
@@ -176,15 +232,10 @@ fun StudentClearanceItem(
                 Text(text = formattedName, fontWeight = FontWeight.Bold)
                 Text(text = "ID: ${student.studentId}", style = MaterialTheme.typography.bodySmall)
             }
-            if (student.isCleared) {
-                OutlinedButton(onClick = { onStatusChange(false) }) {
-                    Text("Undo")
-                }
-            } else {
-                Button(onClick = { onStatusChange(true) }) {
-                    Text("Clear")
-                }
-            }
+            Switch(
+                checked = student.isCleared,
+                onCheckedChange = onStatusChange
+            )
         }
     }
 }

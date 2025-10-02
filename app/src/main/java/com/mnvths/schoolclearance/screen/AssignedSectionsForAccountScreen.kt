@@ -85,7 +85,15 @@ fun AssignedSectionsForAccountScreen(
                 else -> {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(sections, key = { it.sectionId }) { section ->
-                            SectionListItem(section = section)
+                            SectionListItem(
+                                section = section,
+                                onClick = {
+                                    // ✅ FIX: Add the gradeLevel to the end of the route
+                                    navController.navigate(
+                                        "clearanceScreenAccount/${section.sectionId}/${accountId}/${section.sectionName}/${accountName}/${section.gradeLevel}"
+                                    )
+                                }
+                            )
                         }
                     }
                 }
