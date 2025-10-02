@@ -143,6 +143,10 @@ fun SignatoryDetailsScreen(
                                 onUnassignClicked = {
                                     subjectToUnassign = subject
                                     showUnassignSubjectDialog = true
+                                },
+                                // ✅ PASS THE NAVIGATION ACTION
+                                onItemClicked = {
+                                    navController.navigate("assignedSections/${signatoryId}/${subject.subjectId}/${subject.subjectName}")
                                 }
                             )
                         }
@@ -171,6 +175,10 @@ fun SignatoryDetailsScreen(
                                 onUnassignClicked = {
                                     accountToUnassign = account
                                     showUnassignAccountDialog = true
+                                },
+                                // ✅ REPLACE the Toast with this navigation call
+                                onItemClicked = {
+                                    navController.navigate("assignedSectionsForAccount/${signatoryId}/${account.accountId}/${account.accountName}")
                                 }
                             )
                         }
@@ -232,9 +240,16 @@ fun SignatoryDetailsScreen(
 }
 
 @Composable
-fun SubjectListItem(subject: AssignedSubject, onUnassignClicked: () -> Unit) {
+fun SubjectListItem(
+    subject: AssignedSubject,
+    onUnassignClicked: () -> Unit,
+    onItemClicked: () -> Unit
+) {
     var menuExpanded by remember { mutableStateOf(false) }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onItemClicked, // ✅ Make the card clickable
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text = subject.subjectName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Box {
@@ -249,9 +264,16 @@ fun SubjectListItem(subject: AssignedSubject, onUnassignClicked: () -> Unit) {
 
 // ✅ New Composable for displaying an assigned account item
 @Composable
-fun AccountListItem(account: AssignedAccount, onUnassignClicked: () -> Unit) {
+fun AccountListItem(
+    account: AssignedAccount,
+    onUnassignClicked: () -> Unit,
+    onItemClicked: () -> Unit
+) {
     var menuExpanded by remember { mutableStateOf(false) }
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        onClick = onItemClicked, // ✅ Make the card clickable
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text = account.accountName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Box {

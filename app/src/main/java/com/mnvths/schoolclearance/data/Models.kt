@@ -275,3 +275,17 @@ data class AssignedAccount(
     @SerialName("accountName")
     val accountName: String
 )
+
+@Serializable
+data class AssignSectionsToSubjectRequest(
+    val signatoryId: Int,
+    val subjectId: Int,
+    val sectionIds: List<Int>
+)
+
+@Serializable
+data class AssignSectionsToAccountRequest(
+    val signatoryId: Int,
+    val accountId: Int,
+    val sectionIds: List<Int>
+)

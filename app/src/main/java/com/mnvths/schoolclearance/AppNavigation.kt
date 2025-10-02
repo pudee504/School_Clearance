@@ -64,7 +64,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 })
             }
         }
-
+        /*
         composable("facultyDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
@@ -76,7 +76,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 }, navController = navController)
             }
         }
-
+*/
         composable("adminDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
@@ -238,6 +238,70 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 navController = navController,
                 signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                 signatoryName = backStackEntry.arguments?.getString("signatoryName") ?: ""
+            )
+        }
+        // ✅ ADD THE NEW ROUTE for the assigned sections screen
+        composable(
+            route = "assignedSections/{signatoryId}/{subjectId}/{subjectName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("subjectId") { type = NavType.IntType },
+                navArgument("subjectName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignedSectionsScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+            )
+        }
+        // ✅ ADD THE NEW ROUTE for assigning sections to a subject
+        composable(
+            route = "assignSectionsToSubject/{signatoryId}/{subjectId}/{subjectName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("subjectId") { type = NavType.IntType },
+                navArgument("subjectName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignSectionsToSubjectScreen(
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+            )
+        }
+        composable(
+            route = "assignedSectionsForAccount/{signatoryId}/{accountId}/{accountName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("accountId") { type = NavType.IntType },
+                navArgument("accountName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignedSectionsForAccountScreen( // New screen
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                accountId = backStackEntry.arguments?.getInt("accountId") ?: 0,
+                accountName = backStackEntry.arguments?.getString("accountName") ?: ""
+            )
+        }
+
+        // ✅ ADD THE NEW ROUTE for assigning sections to an account
+        composable(
+            route = "assignSectionsToAccount/{signatoryId}/{accountId}/{accountName}",
+            arguments = listOf(
+                navArgument("signatoryId") { type = NavType.IntType },
+                navArgument("accountId") { type = NavType.IntType },
+                navArgument("accountName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignSectionsToAccountScreen( // New screen
+                navController = navController,
+                signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
+                accountId = backStackEntry.arguments?.getInt("accountId") ?: 0,
+                accountName = backStackEntry.arguments?.getString("accountName") ?: ""
             )
         }
     }

@@ -38,6 +38,57 @@ class SignatoryViewModel : ViewModel() {
     private val _assignedAccounts = mutableStateOf<List<AssignedAccount>>(emptyList())
     val assignedAccounts: State<List<AssignedAccount>> = _assignedAccounts
 
+    // ✅ State for the list of sections for a specific account
+    private val _sectionsForAccount = mutableStateOf<List<ClassSection>>(emptyList())
+    val sectionsForAccount: State<List<ClassSection>> = _sectionsForAccount
+
+    // ✅ State for the list of sections for a specific subject
+    private val _sectionsForSubject = mutableStateOf<List<ClassSection>>(emptyList())
+    val sectionsForSubject: State<List<ClassSection>> = _sectionsForSubject
+
+
+    // ✅ Function to fetch sections for a specific account assignment
+    fun fetchSectionsForAccount(signatoryId: Int, accountId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            _sectionsForAccount.value = emptyList() // Clear previous results
+            try {
+                val response: HttpResponse = client.get("/assignments/sections-for-account/$signatoryId/$accountId")
+                if (response.status.isSuccess()) {
+                    _sectionsForAccount.value = response.body()
+                } else {
+                    _error.value = "Failed to load assigned sections for account."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    // ✅ Function to fetch sections for a specific subject assignment
+    fun fetchSectionsForSubject(signatoryId: Int, subjectId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            _sectionsForSubject.value = emptyList() // Clear previous results
+            try {
+                // This new endpoint matches the one created on the server
+                val response: HttpResponse = client.get("/assignments/sections/$signatoryId/$subjectId")
+                if (response.status.isSuccess()) {
+                    _sectionsForSubject.value = response.body()
+                } else {
+                    _error.value = "Failed to load assigned sections."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     // ✅ NEW FUNCTION to unassign an account
     fun unassignAccount(
         signatoryId: Int,

@@ -58,10 +58,9 @@ fun DashboardNavGraph(
                 SignatoryListScreen(navController = rootNavController)
             }
 
-            // ❌ REMOVE addSignatory, signatoryDetails, and editSignatory from this file.
-            // They are now correctly defined in AppNavigation.kt for fullscreen display.
 
             // These routes are for actions taken *within* the Signatory role, so they can stay here.
+            /*
             composable(
                 route = "assignClassesToSubject/{signatoryId}/{signatoryName}/{subjectId}/{subjectName}",
                 arguments = listOf(
@@ -78,7 +77,7 @@ fun DashboardNavGraph(
                     subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
                 )
             }
-
+            */
             composable(
                 "clearanceScreen/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
                 arguments = listOf(

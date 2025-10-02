@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mnvths.schoolclearance.data.Account
 import com.mnvths.schoolclearance.data.AssignClassesRequest
+import com.mnvths.schoolclearance.data.AssignSectionsToAccountRequest
+import com.mnvths.schoolclearance.data.AssignSectionsToSubjectRequest
 import com.mnvths.schoolclearance.data.AssignedAccount
 import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.data.ClassSection
@@ -44,9 +46,107 @@ class AssignmentViewModel : ViewModel() {
     private val _assignedAccounts = mutableStateOf<List<AssignedAccount>>(emptyList())
     val assignedAccounts: State<List<AssignedAccount>> = _assignedAccounts
 
+    // ✅ NEW: State for available sections
+    private val _availableSections = mutableStateOf<List<ClassSection>>(emptyList())
+    val availableSections: State<List<ClassSection>> = _availableSections
 
     // ✅ --- NEW EFFICIENT FETCH FUNCTIONS ---
 
+    // ✅ NEW: Function to load available sections for a specific subject
+    fun loadAvailableSections(signatoryId: Int, subjectId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val response: HttpResponse = client.get("/assignments/available-sections/$signatoryId/$subjectId")
+                if (response.status.isSuccess()) {
+                    _availableSections.value = response.body()
+                } else {
+                    _error.value = "Failed to load available sections."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // ✅ NEW: Function to assign selected sections to a subject
+    // ✅ FIX: Update the function to use the new data class
+    fun assignSectionsToSubject(
+        signatoryId: Int,
+        subjectId: Int,
+        sectionIds: List<Int>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.post("/assignments/sections") {
+                    contentType(ContentType.Application.Json)
+                    // Use the serializable data class instead of a mapOf
+                    setBody(AssignSectionsToSubjectRequest(signatoryId, subjectId, sectionIds))
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                } else {
+                    val errorBody = response.bodyAsText()
+                    onError("Failed to assign sections: ${response.status.description}. Details: $errorBody")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
+    // ✅ NEW: Function to load available sections for a specific account
+    fun loadAvailableSectionsForAccount(signatoryId: Int, accountId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                // We re-use the `_availableSections` state from the subject flow
+                val response: HttpResponse = client.get("/assignments/available-sections-for-account/$signatoryId/$accountId")
+                if (response.status.isSuccess()) {
+                    _availableSections.value = response.body()
+                } else {
+                    _error.value = "Failed to load available sections."
+                }
+            } catch (e: Exception) {
+                _error.value = "Network error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // ✅ NEW: Function to assign selected sections to an account
+    // ✅ FIX: Also update the account assignment function to prevent future errors
+    fun assignSectionsToAccount(
+        signatoryId: Int,
+        accountId: Int,
+        sectionIds: List<Int>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.post("/assignments/sections-for-account") {
+                    contentType(ContentType.Application.Json)
+                    // Use the serializable data class instead of a mapOf
+                    setBody(AssignSectionsToAccountRequest(signatoryId, accountId, sectionIds))
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                } else {
+                    val errorBody = response.bodyAsText()
+                    onError("Failed to assign sections: ${response.status.description}. Details: $errorBody")
+                }
+            } catch (e: Exception) {
+                onError("Network error: ${e.message}")
+            }
+        }
+    }
     fun loadSubjectAssignmentData(signatoryId: Int) {
         viewModelScope.launch {
             _isLoading.value = true

@@ -1,4 +1,4 @@
-package com.mnvths.schoolclearance.screen
+/*package com.mnvths.schoolclearance.screen
 
 
 
@@ -351,3 +351,5 @@ private fun SignatoryMainScreen( // ✅ RENAMED
     }
 
 }
+
+ */
