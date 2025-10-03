@@ -138,7 +138,8 @@ data class StudentListItem(
 data class ClearanceStatusItem(
     val clearanceId: Int?,
     val requirementId: Int,
-    val signatoryName: String?,
+    val requirementName: String?, // Renamed from signatoryName
+    val signatoryName: String?,   // ✅ ADDED THIS NEW FIELD
     val isCleared: Boolean,
     val requirementType: String
 )
@@ -177,6 +178,7 @@ data class UpdateStudentRequest(
     val middleName: String?,
     val lastName: String,
     val password: String?,
+    val gradeLevelId: Int,
     val sectionId: Int?,
     val strandId: Int?,
     val specializationId: Int?
@@ -296,4 +298,10 @@ data class ClearMultipleRequest(
     val schoolYear: String,
     val term: String,
     val studentUserIds: List<Int>
+)
+// Add to your data package
+@Serializable
+data class AddSubjectWithGradeRequest(
+    val subjectName: String,
+    val gradeLevelId: Int
 )

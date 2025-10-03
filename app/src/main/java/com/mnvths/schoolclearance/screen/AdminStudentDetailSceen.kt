@@ -235,7 +235,8 @@ fun AdminStudentDetailScreen(
             if (showConfirmationDialog && pendingClearanceChange != null) {
                 val (item, newStatus) = pendingClearanceChange!!
                 ConfirmationDialog(
-                    itemName = item.signatoryName ?: "this invalid item",
+                    // ✅ FIX IS HERE: Use requirementName instead of signatoryName
+                    itemName = item.requirementName ?: "this requirement",
                     newStatus = newStatus,
                     onConfirm = {
                         profile?.let { p ->
@@ -243,7 +244,8 @@ fun AdminStudentDetailScreen(
                                 isCleared = newStatus, item = item, profile = p,
                                 onSuccess = {
                                     val action = if (newStatus) "cleared" else "marked as not cleared"
-                                    Toast.makeText(context, "${item.signatoryName ?: "Item"} has been $action.", Toast.LENGTH_SHORT).show()
+                                    // Use requirementName here as well for a clearer message
+                                    Toast.makeText(context, "${item.requirementName ?: "Item"} has been $action.", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = { err -> Toast.makeText(context, "Error: $err", Toast.LENGTH_LONG).show() }
                             )
@@ -290,7 +292,17 @@ fun ClearanceRow(
                 tint = if (item.isCleared) Color(0xFF008000) else MaterialTheme.colorScheme.error
             )
             Spacer(Modifier.width(16.dp))
-            Text(item.signatoryName ?: "Invalid Requirement", style = MaterialTheme.typography.bodyLarge)
+
+            Column {
+                Text(item.requirementName ?: "Invalid Requirement", style = MaterialTheme.typography.bodyLarge)
+
+                // ✅ MODIFIED: Removed the "Handled by: " prefix
+                Text(
+                    text = item.signatoryName ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Switch(
             checked = item.isCleared,

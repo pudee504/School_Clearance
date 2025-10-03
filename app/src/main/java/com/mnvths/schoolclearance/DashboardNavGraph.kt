@@ -104,23 +104,8 @@ fun DashboardNavGraph(
             startDestination = "subjectList",
             route = "subjects_graph"
         ) {
-            composable("subjectList") { SubjectListScreen(navController = innerNavController, appSettings = appSettings) }
-            composable("addEditSubject") {
-                AddEditSubjectScreen(navController = innerNavController, subjectId = null, initialName = null)
-            }
-            composable(
-                "addEditSubject/{subjectId}/{subjectName}",
-                arguments = listOf(
-                    navArgument("subjectId") { type = NavType.IntType },
-                    navArgument("subjectName") { type = NavType.StringType }
-                )
-            ) { backStackEntry ->
-                AddEditSubjectScreen(
-                    navController = innerNavController,
-                    subjectId = backStackEntry.arguments?.getInt("subjectId"),
-                    initialName = backStackEntry.arguments?.getString("subjectName")
-                )
-            }
+            composable("subjectList") { SubjectListScreen(navController = rootNavController, appSettings = appSettings) }
+
         }
 
         // --- Accounts Graph ---

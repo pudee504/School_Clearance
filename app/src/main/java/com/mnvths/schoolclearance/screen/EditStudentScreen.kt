@@ -288,7 +288,8 @@ fun EditStudentScreen(
                     }
                     Button(
                         onClick = {
-                            if (studentIdText.isNotBlank() && firstNameText.isNotBlank() && lastNameText.isNotBlank()) {
+                            // ✅ IMPROVED VALIDATION: Check for selectedGrade
+                            if (studentIdText.isNotBlank() && firstNameText.isNotBlank() && lastNameText.isNotBlank() && selectedGrade != null) {
                                 isSaving = true
                                 val updatedStudent = UpdateStudentRequest(
                                     studentId = studentIdText,
@@ -296,6 +297,8 @@ fun EditStudentScreen(
                                     middleName = middleNameText.takeIf { it.isNotBlank() },
                                     lastName = lastNameText,
                                     password = passwordText.takeIf { it.isNotBlank() },
+                                    // ✅ THE FIX: Add the gradeLevelId from the selected grade
+                                    gradeLevelId = selectedGrade!!.id,
                                     sectionId = selectedSectionId,
                                     strandId = selectedStrand?.id,
                                     specializationId = selectedSpecialization?.id
@@ -314,7 +317,8 @@ fun EditStudentScreen(
                                     }
                                 )
                             } else {
-                                Toast.makeText(context, "Please ensure Student ID and names are provided.", Toast.LENGTH_LONG).show()
+                                // ✅ IMPROVED ERROR MESSAGE
+                                Toast.makeText(context, "Please fill out all required fields.", Toast.LENGTH_LONG).show()
                             }
                         },
                         enabled = !isSaving,

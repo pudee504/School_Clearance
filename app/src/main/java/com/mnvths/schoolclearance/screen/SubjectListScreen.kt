@@ -3,7 +3,6 @@ package com.mnvths.schoolclearance.screen
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert // ✅ Import MoreVert icon
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,6 +46,10 @@ fun SubjectListScreen(
 
     var expandedGroupTitle by remember { mutableStateOf<String?>(null) }
 
+    // ✅ State to track which subject's menu is open
+    var expandedMenuSubjectId by remember { mutableStateOf<Int?>(null) }
+
+
     LaunchedEffect(appSettings) {
         viewModel.fetchGroupedSubjects()
     }
@@ -65,116 +69,148 @@ fun SubjectListScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Button(
-            onClick = { navController.navigate("addEditSubject") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add New Subject")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Add New Subject")
+    // ✅ Replaced Column with Scaffold for FAB and TopAppBar support
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Subjects") })
+        },
+        floatingActionButton = {
+            // ✅ Replaced the "Add New Subject" button with a FAB
+            FloatingActionButton(onClick = { navController.navigate("addEditSubject") }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add New Subject")
+            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues) // Apply padding from Scaffold
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Search Subjects") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search Subjects") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (error != null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Error: $error",
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(filteredGroups, key = { it.title }) { group ->
-                    val isExpanded = expandedGroupTitle == group.title
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Error: $error",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredGroups, key = { it.title }) { group ->
+                        val isExpanded = expandedGroupTitle == group.title
 
-                    Card(
-                        onClick = {
-                            expandedGroupTitle = if (isExpanded) null else group.title
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Card(
+                            onClick = {
+                                expandedGroupTitle = if (isExpanded) null else group.title
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = group.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.weight(1f)
-                            )
-                            val rotationAngle by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "rotation")
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Expand",
-                                modifier = Modifier.rotate(rotationAngle)
-                            )
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = group.title,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                val rotationAngle by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "rotation")
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Expand",
+                                    modifier = Modifier.rotate(rotationAngle)
+                                )
+                            }
                         }
-                    }
 
-                    AnimatedVisibility(visible = isExpanded) {
-                        Column(
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            group.subjects.forEach { subject ->
-                                // ✅ This logic creates the final display name
-                                val subjectNameDisplay = if (subject.strandName != null) {
-                                    "${subject.subjectName} (${subject.strandName})"
-                                } else {
-                                    subject.subjectName
-                                }
+                        AnimatedVisibility(visible = isExpanded) {
+                            Column(
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                group.subjects.forEach { subject ->
+                                    val subjectNameDisplay = if (subject.strandName != null) {
+                                        "${subject.subjectName} (${subject.strandName})"
+                                    } else {
+                                        subject.subjectName
+                                    }
 
-                                Card(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = subjectNameDisplay, // Use the new display name
-                                            style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        IconButton(onClick = { navController.navigate("addEditSubject/${subject.subjectId}/${subject.subjectName}") }) {
-                                            Icon(Icons.Filled.Edit, contentDescription = "Edit Subject")
-                                        }
-                                        IconButton(onClick = {
-                                            subjectToDelete = subject
-                                            showDeleteDialog = true
-                                        }) {
-                                            Icon(Icons.Filled.Delete, contentDescription = "Delete Subject", tint = MaterialTheme.colorScheme.error)
+                                    Card(modifier = Modifier.fillMaxWidth()) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = subjectNameDisplay,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            // ✅ START: Dropdown Menu implementation
+                                            Box {
+                                                IconButton(onClick = { expandedMenuSubjectId = subject.subjectId }) {
+                                                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                                                }
+                                                DropdownMenu(
+                                                    expanded = expandedMenuSubjectId == subject.subjectId,
+                                                    onDismissRequest = { expandedMenuSubjectId = null }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text("Edit") },
+                                                        onClick = {
+                                                            navController.navigate("addEditSubject/${subject.subjectId}/${subject.subjectName}")
+                                                            expandedMenuSubjectId = null
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = "Edit") }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                                        onClick = {
+                                                            subjectToDelete = subject
+                                                            showDeleteDialog = true
+                                                            expandedMenuSubjectId = null
+                                                        },
+                                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
+                                                    )
+                                                }
+                                            }
+                                            // ✅ END: Dropdown Menu implementation
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                    // Add space at the bottom so content isn't hidden by FAB
+                    item {
+                        Spacer(modifier = Modifier.height(80.dp))
+                    }
                 }
             }
         }
     }
+
 
     if (showDeleteDialog && subjectToDelete != null) {
         AlertDialog(

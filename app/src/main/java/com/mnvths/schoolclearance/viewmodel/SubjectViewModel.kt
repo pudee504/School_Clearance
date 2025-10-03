@@ -5,8 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mnvths.schoolclearance.data.AddSubjectRequest
+import com.mnvths.schoolclearance.data.AddSubjectWithGradeRequest
 import com.mnvths.schoolclearance.data.CurriculumResponse
 import com.mnvths.schoolclearance.data.CurriculumSubject
+import com.mnvths.schoolclearance.data.GradeLevelItem
 import com.mnvths.schoolclearance.data.Subject
 import com.mnvths.schoolclearance.data.SubjectGroup
 import com.mnvths.schoolclearance.network.KtorClient
@@ -14,6 +16,8 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class SubjectViewModel : ViewModel() {
@@ -28,11 +32,25 @@ class SubjectViewModel : ViewModel() {
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
+    // ✅ ADDED: State for grade levels
+    private val _gradeLevels = MutableStateFlow<List<GradeLevelItem>>(emptyList())
+    val gradeLevels = _gradeLevels.asStateFlow()
     private val _error = mutableStateOf<String?>(null)
     val error: State<String?> = _error
 
     init {
         fetchSubjects()
+    }
+
+    // ✅ ADDED: Function to fetch grade levels
+    fun fetchGradeLevels() {
+        viewModelScope.launch {
+            try {
+                _gradeLevels.value = client.get("/curriculum/grade-levels").body()
+            } catch (e: Exception) {
+                _error.value = "Failed to load grade levels: ${e.message}"
+            }
+        }
     }
 
     fun fetchGroupedSubjects() {
@@ -100,19 +118,24 @@ class SubjectViewModel : ViewModel() {
         }
     }
 
-    fun addSubject(name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    // ✅ MODIFIED: The addSubject function now accepts gradeLevelId
+    fun addSubject(name: String, gradeLevelId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                // ✅ UPDATED
+                val requestBody = AddSubjectWithGradeRequest(
+                    subjectName = name,
+                    gradeLevelId = gradeLevelId
+                )
                 val response = client.post("/subjects") {
                     contentType(ContentType.Application.Json)
-                    setBody(AddSubjectRequest(name))
+                    setBody(requestBody) // Use the new request body
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSubjects() // Refresh list
+                    fetchGroupedSubjects() // Refresh the main list
                 } else {
-                    onError(response.bodyAsText())
+                    val errorBody = response.body<Map<String, String>>()
+                    onError(errorBody["error"] ?: "Failed to add subject.")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")

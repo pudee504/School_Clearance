@@ -65,6 +65,9 @@ class StudentManagementViewModel : ViewModel() {
 
     private val _specializations = MutableStateFlow<List<Specialization>>(emptyList())
     val specializations: StateFlow<List<Specialization>> = _specializations.asStateFlow()
+    // ✅ NEW: Add a separate state for this screen to avoid conflicts
+    private val _unassignedStudents = MutableStateFlow<List<StudentListItem>>(emptyList())
+    val unassignedStudents: StateFlow<List<StudentListItem>> = _unassignedStudents.asStateFlow()
 
     private val _studentsInSection = MutableStateFlow<List<StudentInSection>>(emptyList())
     val studentsInSection: StateFlow<List<StudentInSection>> = _studentsInSection.asStateFlow()
@@ -75,6 +78,20 @@ class StudentManagementViewModel : ViewModel() {
         fetchClassSections()
         fetchShsTracks()
         fetchShsStrands()
+    }
+    fun fetchUnassignedStudents() {
+        viewModelScope.launch {
+            isLoading.value = true
+            error.value = null
+            try {
+                // This calls the new, efficient endpoint
+                _unassignedStudents.value = client.get("/students/unassigned").body()
+            } catch (e: Exception) {
+                error.value = "Network Error: ${e.message}"
+            } finally {
+                isLoading.value = false
+            }
+        }
     }
 
     fun unassignStudentFromSection(

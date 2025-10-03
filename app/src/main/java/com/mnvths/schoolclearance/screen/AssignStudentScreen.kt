@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,13 +27,14 @@ fun AssignStudentScreen(
     viewModel: StudentManagementViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val allStudents by viewModel.students.collectAsState()
+    // ✅ 1. Use the correct state variable for unassigned students
+    val unassignedStudents by viewModel.unassignedStudents.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     var selectedStudentIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    // This derived state will automatically update when allStudents changes
-    val unassignedStudents = remember(allStudents) {
-        allStudents.filter { it.sectionId == null }
+    // ✅ 2. Call the specific function to fetch only the students we need
+    LaunchedEffect(Unit) {
+        viewModel.fetchUnassignedStudents()
     }
 
     Scaffold(
@@ -42,7 +43,7 @@ fun AssignStudentScreen(
                 title = { Text("Assign Students") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -80,9 +81,12 @@ fun AssignStudentScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (unassignedStudents.isEmpty()) {
+            // ✅ 3. Add a loading indicator for a better user experience
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (unassignedStudents.isEmpty()) {
                 Text(
-                    text = "There are no students without a section.",
+                    text = "There are no students without a section and grade level.",
                     textAlign = TextAlign.Center,
                     modifier = Modifier.align(Alignment.Center).padding(16.dp)
                 )
@@ -110,6 +114,7 @@ fun AssignStudentScreen(
     }
 }
 
+// Your SelectableStudentRow composable is already correct and needs no changes.
 @Composable
 fun SelectableStudentRow(
     student: StudentListItem,
