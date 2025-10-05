@@ -1,4 +1,4 @@
-package com.mnvths.schoolclearance.screen
+/*package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -132,4 +132,4 @@ fun AddEditSubjectScreen(
             }
         }
     }
-}
+} */

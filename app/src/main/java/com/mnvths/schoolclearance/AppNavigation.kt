@@ -346,7 +346,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 // We don't pass 'isAccountClearance', so it correctly defaults to 'false'
             )
         }
-
+/*
         composable("addEditSubject") {
             AddEditSubjectScreen(navController = navController, subjectId = null, initialName = null)
         }
@@ -361,6 +361,20 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 navController = navController,
                 subjectId = backStackEntry.arguments?.getInt("subjectId"),
                 initialName = backStackEntry.arguments?.getString("subjectName")
+            )
+        }
+*/
+        composable(
+            "curriculumManagement/{gradeLevelId}/{gradeLevelName}",
+            arguments = listOf(
+                navArgument("gradeLevelId") { type = NavType.IntType },
+                navArgument("gradeLevelName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            CurriculumManagementScreen(
+                navController = navController,
+                gradeLevelId = backStackEntry.arguments?.getInt("gradeLevelId")!!,
+                gradeLevelName = backStackEntry.arguments?.getString("gradeLevelName")!!
             )
         }
     }

@@ -4,17 +4,13 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mnvths.schoolclearance.data.AddSubjectRequest
 import com.mnvths.schoolclearance.data.AddSubjectWithGradeRequest
-import com.mnvths.schoolclearance.data.CurriculumResponse
-import com.mnvths.schoolclearance.data.CurriculumSubject
+import com.mnvths.schoolclearance.data.CurriculumManagementSubject
 import com.mnvths.schoolclearance.data.GradeLevelItem
-import com.mnvths.schoolclearance.data.Subject
-import com.mnvths.schoolclearance.data.SubjectGroup
+import com.mnvths.schoolclearance.data.UpdateRequirementStatusRequest
 import com.mnvths.schoolclearance.network.KtorClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,116 +19,86 @@ import kotlinx.coroutines.launch
 class SubjectViewModel : ViewModel() {
     private val client = KtorClient.httpClient
 
-    private val _subjects = mutableStateOf<List<Subject>>(emptyList())
-    val subjects: State<List<Subject>> = _subjects
-
-    private val _groupedSubjects = mutableStateOf<List<SubjectGroup>>(emptyList())
-    val groupedSubjects: State<List<SubjectGroup>> = _groupedSubjects
-
     private val _isLoading = mutableStateOf(false)
     val isLoading: State<Boolean> = _isLoading
 
-    // ✅ ADDED: State for grade levels
-    private val _gradeLevels = MutableStateFlow<List<GradeLevelItem>>(emptyList())
-    val gradeLevels = _gradeLevels.asStateFlow()
-    private val _error = mutableStateOf<String?>(null)
+    private val _error = mutableStateOf<String?>((null))
     val error: State<String?> = _error
 
-    init {
-        fetchSubjects()
-    }
+    private val _gradeLevels = MutableStateFlow<List<GradeLevelItem>>(emptyList())
+    val gradeLevels = _gradeLevels.asStateFlow()
 
-    // ✅ ADDED: Function to fetch grade levels
+    private val _managementSubjects = MutableStateFlow<List<CurriculumManagementSubject>>(emptyList())
+    val managementSubjects = _managementSubjects.asStateFlow()
+
     fun fetchGradeLevels() {
         viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
             try {
                 _gradeLevels.value = client.get("/curriculum/grade-levels").body()
             } catch (e: Exception) {
                 _error.value = "Failed to load grade levels: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    fun fetchGroupedSubjects() {
+    // ✅ MODIFIED: This function now accepts a semester.
+    fun fetchSubjectsForGradeLevel(gradeLevelId: Int, semester: Int) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED
-                val response: CurriculumResponse = client.get("/subjects/curriculum").body()
-                val activeSem = response.activeSemester.toIntOrNull() ?: 1
+                // The semester is now passed as a query parameter to the API call.
+                val rawSubjects: List<CurriculumManagementSubject> = client.get("/curriculum/$gradeLevelId/subjects?semester=$semester").body()
 
-                val allGroups = mutableListOf<SubjectGroup>()
-
-                response.subjects
-                    .filter { it.gradeLevelId != null && it.gradeLevelId <= 4 }
-                    .groupBy { it.gradeLevel!! }
-                    .toSortedMap(compareBy { it.filter { char -> char.isDigit() }.toInt() })
-                    .forEach { (gradeLevel, subjects) ->
-                        allGroups.add(SubjectGroup(gradeLevel, subjects))
-                    }
-
-                val shsSubjectsByGrade = response.subjects
-                    .filter { it.gradeLevelId != null && it.gradeLevelId > 4 && it.semester == activeSem }
-                    .groupBy { it.gradeLevel!! }
-                    .toSortedMap()
-
-                shsSubjectsByGrade.forEach { (gradeLevel, subjects) ->
-                    val subjectsGroupedById = subjects.groupBy { it.subjectId }
-
+                // De-duplication logic for SHS is still necessary and works correctly here.
+                if (gradeLevelId > 4) { // Apply only for SHS
+                    val subjectsGroupedById = rawSubjects.groupBy { it.subjectId }
                     val uniqueSubjects = subjectsGroupedById.map { (_, subjectList) ->
-                        if (subjectList.size > 1) {
-                            subjectList.first().copy(strandName = null)
-                        } else {
-                            subjectList.first()
-                        }
-                    }.sortedBy { it.display_order }
-
-                    allGroups.add(SubjectGroup("$gradeLevel - Semester $activeSem", uniqueSubjects))
+                        subjectList.first()
+                    }.sortedBy { it.subjectName }
+                    _managementSubjects.value = uniqueSubjects
+                } else {
+                    _managementSubjects.value = rawSubjects
                 }
 
-                _groupedSubjects.value = allGroups
-
             } catch (e: Exception) {
-                _error.value = "Error: ${e.message}"
+                _error.value = "Failed to load subjects: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-
-    fun fetchSubjects() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                // ✅ UPDATED: Fetches from the correct '/subjects' endpoint
-                val response: List<Subject> = client.get("/subjects").body()
-                _subjects.value = response.sortedBy { it.name }
-            } catch (e: Exception) {
-                _error.value = "Error: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    // ✅ MODIFIED: The addSubject function now accepts gradeLevelId
-    fun addSubject(name: String, gradeLevelId: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    // ✅ CHANGED: Function signature now accepts an optional subjectCode
+    // ✅ CHANGED: The function signature now requires a subjectCode
+    fun addSubjectToCurriculum(
+        name: String,
+        gradeLevelId: Int,
+        semester: Int,
+        subjectCode: String, // ✅ CHANGED: No longer nullable (String? -> String)
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val requestBody = AddSubjectWithGradeRequest(
                     subjectName = name,
-                    gradeLevelId = gradeLevelId
+                    gradeLevelId = gradeLevelId,
+                    semester = semester,
+                    subjectCode = subjectCode
                 )
+                // ... (rest of the function is the same)
                 val response = client.post("/subjects") {
                     contentType(ContentType.Application.Json)
-                    setBody(requestBody) // Use the new request body
+                    setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchGroupedSubjects() // Refresh the main list
+                    fetchSubjectsForGradeLevel(gradeLevelId, semester)
                 } else {
                     val errorBody = response.body<Map<String, String>>()
                     onError(errorBody["error"] ?: "Failed to add subject.")
@@ -143,37 +109,19 @@ class SubjectViewModel : ViewModel() {
         }
     }
 
-    fun updateSubject(id: Int, name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun setRequirementStatus(requirementId: Int, status: String, gradeLevelId: Int, semester: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
-                // ✅ UPDATED
-                val response = client.put("/subjects/$id") {
+                val response = client.patch("/curriculum/requirements/$requirementId/status") {
                     contentType(ContentType.Application.Json)
-                    setBody(AddSubjectRequest(name))
+                    setBody(UpdateRequirementStatusRequest(status))
                 }
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    fetchSubjects() // Refresh list
-                } else {
-                    onError(response.bodyAsText())
-                }
-            } catch (e: Exception) {
-                onError("Network error: ${e.message}")
-            }
-        }
-    }
-
-    fun deleteSubject(id: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        viewModelScope.launch {
-            try {
-                // ✅ UPDATED
-                val response = client.delete("/subjects/$id")
-                if (response.status.isSuccess()) {
-                    onSuccess()
-                    fetchSubjects() // Refresh list
+                    fetchSubjectsForGradeLevel(gradeLevelId, semester) // Refresh with the current semester
                 } else {
                     val errorBody = response.body<Map<String, String>>()
-                    onError(errorBody["error"] ?: "Failed to delete.")
+                    onError(errorBody["error"] ?: "Failed to update status.")
                 }
             } catch (e: Exception) {
                 onError("Network error: ${e.message}")

@@ -1,5 +1,6 @@
 package com.mnvths.schoolclearance
 
+import AccountListScreen
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
@@ -101,11 +102,14 @@ fun DashboardNavGraph(
 
         // --- Subjects Graph ---
         navigation(
-            startDestination = "subjectList",
+            // ✅ Change the start destination to the new home screen
+            startDestination = "curriculumHome",
             route = "subjects_graph"
         ) {
-            composable("subjectList") { SubjectListScreen(navController = rootNavController, appSettings = appSettings) }
-
+            // ✅ This is the new entry point for the "Subjects" tab
+            composable("curriculumHome") {
+                CurriculumHomeScreen(navController = rootNavController)
+            }
         }
 
         // --- Accounts Graph ---

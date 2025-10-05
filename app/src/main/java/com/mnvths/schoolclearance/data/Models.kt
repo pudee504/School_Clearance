@@ -300,8 +300,30 @@ data class ClearMultipleRequest(
     val studentUserIds: List<Int>
 )
 // Add to your data package
+// The request body should probably include the semester
 @Serializable
 data class AddSubjectWithGradeRequest(
     val subjectName: String,
-    val gradeLevelId: Int
+    val gradeLevelId: Int,
+    val semester: Int,
+    val subjectCode: String
+)
+
+// ✅ ADDED: Represents a subject in the management screen
+@Serializable
+data class CurriculumManagementSubject(
+    val requirementId: Int,
+    val subjectId: Int,
+    val subjectName: String
+)
+
+// ✅ ADDED: Request body for inactivating a subject
+@Serializable
+data class UpdateRequirementStatusRequest(
+    val status: String // "active" or "inactive"
+)
+
+@Serializable
+data class UpdateOrderRequest(
+    val orderedIds: List<Int>
 )
