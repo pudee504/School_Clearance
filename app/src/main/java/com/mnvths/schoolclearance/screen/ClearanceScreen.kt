@@ -30,6 +30,7 @@ fun ClearanceScreen(
     sectionName: String,
     subjectName: String,
     isAccountClearance: Boolean = false,
+    showFab: Boolean = true,
     viewModel: ClearanceViewModel = viewModel()
 ) {
     val students by viewModel.students
@@ -152,12 +153,14 @@ fun ClearanceScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate("assignStudent/${sectionId}")
+            if (showFab) { // ✅ WRAP THE FAB IN THIS IF-STATEMENT
+                FloatingActionButton(
+                    onClick = {
+                        navController.navigate("assignStudent/${sectionId}")
+                    }
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add Students to Section")
                 }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Students to Section")
             }
         }
     ) { paddingValues ->

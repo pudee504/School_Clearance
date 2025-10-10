@@ -10,16 +10,20 @@ data class ClearanceItem(
     val subjectName: String?,
     val schoolYear: String,
     val quarter: Int,
-    val isCleared: Boolean
+    val isCleared: Boolean,
+    @SerialName("signatoryName")
+    val signatoryName: String?,
+    val requirementType: String
 )
 
 @Serializable
 data class StudentProfile(
+    val userId: Int,
     val id: String,
     val name: String,
     val role: String,
-    val gradeLevel: String,
-    val section: String,
+    val gradeLevel: String?, // Before: String
+    val section: String?,
     val clearanceStatus: List<ClearanceItem>
 )
 
@@ -27,7 +31,8 @@ data class StudentProfile(
 data class OtherUser(
     val id: Int,
     val name: String,
-    val role: String
+    val role: String,
+    val username: String?
 )
 
 sealed class LoggedInUser {
@@ -326,4 +331,11 @@ data class UpdateRequirementStatusRequest(
 @Serializable
 data class UpdateOrderRequest(
     val orderedIds: List<Int>
+)
+
+@Serializable
+data class ChangePasswordRequest(
+    val userId: Int,
+    val oldPassword: String,
+    val newPassword: String
 )

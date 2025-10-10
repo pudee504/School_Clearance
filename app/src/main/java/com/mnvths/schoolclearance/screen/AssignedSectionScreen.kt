@@ -29,6 +29,8 @@ fun AssignedSectionsScreen(
     signatoryId: Int,
     subjectId: Int,
     subjectName: String,
+    destinationRoute: String,
+    showFab: Boolean = true,
     viewModel: SignatoryViewModel = viewModel()
 ) {
     val sections by viewModel.sectionsForSubject
@@ -52,13 +54,14 @@ fun AssignedSectionsScreen(
         },
         // ✅ ADD THE FLOATING ACTION BUTTON
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    // Navigate to the new screen, passing the necessary arguments
-                    navController.navigate("assignSectionsToSubject/${signatoryId}/${subjectId}/${subjectName}")
+            if (showFab) { // ✅ WRAP THE BUTTON IN THIS IF-STATEMENT
+                FloatingActionButton(
+                    onClick = {
+                        navController.navigate("assignSectionsToSubject/${signatoryId}/${subjectId}/${subjectName}")
+                    }
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Assign Section")
                 }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Assign Section")
             }
         }
     ) { paddingValues ->
@@ -95,10 +98,9 @@ fun AssignedSectionsScreen(
                             SectionListItem(
                                 section = section,
                                 onClick = {
-                                    // This navigation call will now work correctly
-                                    navController.navigate(
-                                        "clearanceScreen/${section.sectionId}/${subjectId}/${section.gradeLevel}/${section.sectionName}/${subjectName}"
-                                    )
+                                    // ✅ USE THE NEW PARAMETER HERE
+                                    val route = "$destinationRoute/${section.sectionId}/${subjectId}/${section.gradeLevel}/${section.sectionName}/${subjectName}"
+                                    navController.navigate(route)
                                 }
                             )
                         }

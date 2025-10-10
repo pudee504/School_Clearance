@@ -30,8 +30,8 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
         when (val user = loggedInUser) {
             is LoggedInUser.StudentUser -> "studentDetail"
             is LoggedInUser.FacultyAdminUser -> when (user.user.role) {
-                "faculty" -> "facultyDashboard"
                 "admin" -> "adminDashboard"
+                "signatory" -> "signatoryDashboard"
                 else -> "login"
             }
             null -> "login"
@@ -77,6 +77,20 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
             }
         }
 */
+        composable("signatoryDashboard") {
+            val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
+            if (user != null) {
+                SignatoryDashboard(
+                    user = user,
+                    onSignOut = {
+                        authViewModel.logout()
+                        navController.navigate("login") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    },
+                )
+            }
+        }
         composable("adminDashboard") {
             val user = (authViewModel.loggedInUser.value as? LoggedInUser.FacultyAdminUser)?.user
             if (user != null) {
@@ -253,7 +267,8 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 navController = navController,
                 signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                 subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
-                subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: "",
+                destinationRoute = "clearanceScreen"
             )
         }
         // ✅ ADD THE NEW ROUTE for assigning sections to a subject
@@ -284,7 +299,8 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 navController = navController,
                 signatoryId = backStackEntry.arguments?.getInt("signatoryId") ?: 0,
                 accountId = backStackEntry.arguments?.getInt("accountId") ?: 0,
-                accountName = backStackEntry.arguments?.getString("accountName") ?: ""
+                accountName = backStackEntry.arguments?.getString("accountName") ?: "",
+                destinationRoute = "clearanceScreen"
             )
         }
 

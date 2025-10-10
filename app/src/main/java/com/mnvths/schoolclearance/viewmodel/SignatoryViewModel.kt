@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mnvths.schoolclearance.data.AssignedAccount
 import com.mnvths.schoolclearance.data.AssignedSubject
+import com.mnvths.schoolclearance.data.ChangePasswordRequest
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.data.Signatory
 import com.mnvths.schoolclearance.network.KtorClient
@@ -15,6 +16,8 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class SignatoryViewModel : ViewModel() {
     private val client = KtorClient.httpClient

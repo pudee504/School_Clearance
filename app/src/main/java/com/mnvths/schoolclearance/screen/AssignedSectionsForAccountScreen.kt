@@ -25,6 +25,8 @@ fun AssignedSectionsForAccountScreen(
     signatoryId: Int,
     accountId: Int,
     accountName: String,
+    destinationRoute: String,
+    showFab: Boolean = true,
     viewModel: SignatoryViewModel = viewModel()
 ) {
     val sections by viewModel.sectionsForAccount
@@ -47,12 +49,14 @@ fun AssignedSectionsForAccountScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    navController.navigate("assignSectionsToAccount/${signatoryId}/${accountId}/${accountName}")
+            if (showFab) { // ✅ WRAP THE BUTTON IN THIS IF-STATEMENT
+                FloatingActionButton(
+                    onClick = {
+                        navController.navigate("assignSectionsToAccount/${signatoryId}/${accountId}/${accountName}")
+                    }
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Assign Section")
                 }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Assign Section")
             }
         }
     ) { paddingValues ->
@@ -88,10 +92,9 @@ fun AssignedSectionsForAccountScreen(
                             SectionListItem(
                                 section = section,
                                 onClick = {
-                                    // ✅ FIX: Add the gradeLevel to the end of the route
-                                    navController.navigate(
-                                        "clearanceScreenAccount/${section.sectionId}/${accountId}/${section.sectionName}/${accountName}/${section.gradeLevel}"
-                                    )
+                                    // ✅ USE THE NEW PARAMETER HERE
+                                    val route = "$destinationRoute/${section.sectionId}/${accountId}/${section.sectionName}/${accountName}/${section.gradeLevel}"
+                                    navController.navigate(route)
                                 }
                             )
                         }

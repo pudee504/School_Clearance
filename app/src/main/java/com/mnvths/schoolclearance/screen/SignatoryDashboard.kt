@@ -1,355 +1,361 @@
-/*package com.mnvths.schoolclearance.screen
-
-
+package com.mnvths.schoolclearance.screen
 
 import android.os.Build
-
+import android.widget.Toast
 import androidx.annotation.RequiresApi
-
-import androidx.compose.animation.AnimatedVisibility
-
-import androidx.compose.foundation.clickable
-
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.foundation.lazy.LazyColumn
-
 import androidx.compose.foundation.lazy.items
-
 import androidx.compose.material.icons.Icons
-
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
-
 import androidx.compose.runtime.*
-
 import androidx.compose.ui.Alignment
-
 import androidx.compose.ui.Modifier
-
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-
 import androidx.lifecycle.viewmodel.compose.viewModel
-
-import androidx.navigation.NavController
-
 import androidx.navigation.NavHostController
-
 import androidx.navigation.NavType
-
 import androidx.navigation.compose.NavHost
-
 import androidx.navigation.compose.composable
-
 import androidx.navigation.compose.rememberNavController
-
 import androidx.navigation.navArgument
-
+import com.mnvths.schoolclearance.R
 import com.mnvths.schoolclearance.data.OtherUser
-
+import com.mnvths.schoolclearance.viewmodel.AuthViewModel
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
-
-
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SignatoryDashboard(
+    user: OtherUser,
+    onSignOut: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
+) {
+    val innerNavController = rememberNavController()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    var showPasswordDialog by remember { mutableStateOf(false) }
+
+    if (showPasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = { showPasswordDialog = false },
+            onConfirm = { oldPassword, newPassword ->
+                // ✅ CALL THE FUNCTION FROM AUTHVIEWMODEL
+                authViewModel.changePassword(
+                    userId = user.id,
+                    oldPassword = oldPassword,
+                    newPassword = newPassword,
+                    onSuccess = {
+                        Toast.makeText(context, "Password changed successfully!", Toast.LENGTH_SHORT).show()
+                        showPasswordDialog = false
+                    },
+                    onError = { errorMsg ->
+                        Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        )
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            SignatoryDrawerContent(
+                user = user,
+                onChangePasswordClick = {
+                    scope.launch { drawerState.close() }
+                    showPasswordDialog = true
+                },
+                onSignOutClick = {
+                    scope.launch { drawerState.close() }
+                    onSignOut()
+                }
+            )
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Signatory Dashboard") },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Open Navigation Menu"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues)) {
+                SignatoryNavHost(
+                    innerNavController = innerNavController,
+                    user = user,
+                )
+            }
+        }
+    }
+}
 
 @Composable
-
-fun SignatoryDashboard(user: OtherUser, onSignOut: () -> Unit, navController: NavController) { // ✅ RENAMED
-
-    val signatoryNavController = rememberNavController()
-
-
-
-// ✅ Use 'signatory_main' for internal routes
-
-    NavHost(navController = signatoryNavController, startDestination = "signatory_main") {
-
-        composable("signatory_main") {
-
-            SignatoryMainScreen( // ✅ RENAMED
-
-                user = user,
-
-                onSignOut = onSignOut,
-
-                navController = signatoryNavController
-
+private fun SignatoryNavHost(
+    innerNavController: NavHostController,
+    user: OtherUser
+) {
+    NavHost(
+        navController = innerNavController,
+        startDestination = "assignments_overview"
+    ) {
+        composable("assignments_overview") {
+            AssignmentsOverviewScreen(
+                navController = innerNavController,
+                user = user
             )
-
         }
 
         composable(
-
-            "clearanceScreen/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
-
+            route = "assigned_sections_subject/{subjectId}/{subjectName}",
             arguments = listOf(
-
-                navArgument("sectionId") { type = NavType.IntType },
-
                 navArgument("subjectId") { type = NavType.IntType },
-
-                navArgument("gradeLevel") { type = NavType.StringType },
-
-                navArgument("sectionName") { type = NavType.StringType },
-
                 navArgument("subjectName") { type = NavType.StringType }
-
             )
-
         ) { backStackEntry ->
-
-            ClearanceScreen(
-
-                navController = signatoryNavController,
-
-                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
-
+            AssignedSectionsScreen(
+                navController = innerNavController,
+                signatoryId = user.id,
                 subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
-
-                gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
-
-                sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
-
-                subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
-
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: "",
+                destinationRoute = "clearance_subject",
+                showFab = false
             )
-
         }
 
-    }
+        composable(
+            route = "assigned_sections_account/{accountId}/{accountName}",
+            arguments = listOf(
+                navArgument("accountId") { type = NavType.IntType },
+                navArgument("accountName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            AssignedSectionsForAccountScreen(
+                navController = innerNavController,
+                signatoryId = user.id,
+                accountId = backStackEntry.arguments?.getInt("accountId") ?: 0,
+                accountName = backStackEntry.arguments?.getString("accountName") ?: "",
+                destinationRoute = "clearance_account",
+                showFab = false
+            )
+        }
 
+        composable(
+            route = "clearance_subject/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("subjectId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType },
+                navArgument("subjectName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            ClearanceScreen(
+                navController = innerNavController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
+                gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
+                sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: "",
+                isAccountClearance = false,
+                showFab = false
+            )
+        }
+
+        composable(
+            route = "clearance_account/{sectionId}/{accountId}/{gradeLevel}/{sectionName}/{accountName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("accountId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType },
+                navArgument("accountName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            ClearanceScreen(
+                navController = innerNavController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("accountId") ?: 0,
+                gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
+                sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
+                subjectName = backStackEntry.arguments?.getString("accountName") ?: "",
+                isAccountClearance = true,
+                showFab = false
+            )
+        }
+    }
 }
 
-
-
-@OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
-
-private fun SignatoryMainScreen( // ✅ RENAMED
-
-    user: OtherUser,
-
-    onSignOut: () -> Unit,
-
+private fun AssignmentsOverviewScreen(
     navController: NavHostController,
-
+    user: OtherUser,
     viewModel: SignatoryViewModel = viewModel()
-
 ) {
-
     val assignedSubjects by viewModel.assignedSubjects
-
-    val assignedSections by viewModel.assignedSections
-
+    val assignedAccounts by viewModel.assignedAccounts
     val isLoading by viewModel.isLoading
-
-    var expandedSubjectId by remember { mutableStateOf<Int?>(null) }
-
-
+    val error by viewModel.error
 
     LaunchedEffect(user.id) {
-
         viewModel.fetchAssignedSubjects(user.id)
-
+        viewModel.fetchAssignedAccounts(user.id)
     }
 
-
-
-    Scaffold(
-
-        topBar = {
-
-            TopAppBar(
-
-                title = { Text("Signatory Dashboard") }, // ✅ RENAMED
-
-                actions = {
-
-                    IconButton(onClick = onSignOut) {
-
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Sign Out")
-
-                    }
-
-                }
-
-            )
-
-        }
-
-    ) { paddingValues ->
-
-        Column(
-
-            modifier = Modifier
-
-                .fillMaxSize()
-
-                .padding(paddingValues)
-
-                .padding(16.dp),
-
-            horizontalAlignment = Alignment.Start
-
-        ) {
-
-            Text(text = "Name: ${user.name}", style = MaterialTheme.typography.headlineSmall)
-
-            Text(text = "ID: ${user.id}", style = MaterialTheme.typography.bodyLarge)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(text = "My Assigned Subjects:", style = MaterialTheme.typography.titleLarge)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-
-
-            if (isLoading) {
-
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-
-                    CircularProgressIndicator()
-
-                }
-
-            } else if (assignedSubjects.isEmpty()) {
-
-                Text("You have no subjects assigned to you yet.")
-
-            } else {
-
-                LazyColumn(
-
-                    modifier = Modifier.fillMaxWidth(),
-
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-
-                ) {
-
-                    items(assignedSubjects) { subject ->
-
-                        Card(modifier = Modifier.fillMaxWidth()) {
-
-                            Column(modifier = Modifier.padding(16.dp)) {
-
-                                Row(
-
-                                    modifier = Modifier.fillMaxWidth(),
-
-                                    verticalAlignment = Alignment.CenterVertically
-
-                                ) {
-
-                                    Text(
-
-                                        text = subject.subjectName,
-
-                                        style = MaterialTheme.typography.titleMedium,
-
-                                        modifier = Modifier.weight(1f)
-
-                                    )
-
-                                    IconButton(onClick = {
-
-                                        expandedSubjectId = if (expandedSubjectId == subject.subjectId) {
-
-                                            null
-
-                                        } else {
-
-                                            viewModel.fetchAssignedSections(user.id, subject.subjectId)
-
-                                            subject.subjectId
-
-                                        }
-
-                                    }) {
-
-                                        Icon(
-
-                                            if (expandedSubjectId == subject.subjectId) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-
-                                            contentDescription = "Expand"
-
-                                        )
-
-                                    }
-
-                                }
-
-                                AnimatedVisibility(visible = expandedSubjectId == subject.subjectId) {
-
-                                    val sections = assignedSections[subject.subjectId]
-
-                                    when {
-
-                                        sections == null -> Box(modifier = Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-
-                                            CircularProgressIndicator()
-
-                                        }
-
-                                        sections.isEmpty() -> Text("No sections assigned.", modifier = Modifier.padding(top = 8.dp))
-
-                                        else -> {
-
-                                            Column(modifier = Modifier.padding(top = 8.dp)) {
-
-                                                sections.forEach { section ->
-
-                                                    Row(
-
-                                                        modifier = Modifier
-
-                                                            .fillMaxWidth()
-
-                                                            .clickable {
-
-                                                                navController.navigate("clearanceScreen/${section.sectionId}/${subject.subjectId}/${section.gradeLevel}/${section.sectionName}/${subject.subjectName}")
-
-                                                            }
-
-                                                            .padding(vertical = 8.dp, horizontal = 16.dp),
-
-                                                        ) {
-
-                                                        Text(text = "${section.gradeLevel} - ${section.sectionName}")
-
-                                                    }
-
-                                                }
-
-                                            }
-
-                                        }
-
-                                    }
-
-                                }
-
-                            }
-
-                        }
-
-                    }
-
-                }
-
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(user.name, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "Username: ${user.username ?: "N/A"}",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp))
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
+        } else if (error != null) {
+            Text(
+                text = "Error: $error",
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    Text(
+                        text = "Assigned Subjects",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                if (assignedSubjects.isEmpty()) {
+                    item { Text("No subjects assigned.", modifier = Modifier.padding(bottom = 16.dp)) }
+                } else {
+                    items(assignedSubjects) { subject ->
+                        AssignmentListItem(
+                            name = subject.subjectName,
+                            onItemClicked = {
+                                navController.navigate("assigned_sections_subject/${subject.subjectId}/${subject.subjectName}")
+                            }
+                        )
+                    }
+                }
 
+                item { Divider(modifier = Modifier.padding(vertical = 16.dp)) }
+
+                item {
+                    Text(
+                        text = "Assigned Accounts",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                if (assignedAccounts.isEmpty()) {
+                    item { Text("No accounts assigned.") }
+                } else {
+                    items(assignedAccounts) { account ->
+                        AssignmentListItem(
+                            name = account.accountName,
+                            onItemClicked = {
+                                navController.navigate("assigned_sections_account/${account.accountId}/${account.accountName}")
+                            }
+                        )
+                    }
+                }
+            }
         }
-
     }
-
 }
 
- */
+@Composable
+private fun AssignmentListItem(
+    name: String,
+    onItemClicked: () -> Unit
+) {
+    Card(
+        onClick = onItemClicked,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text = name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+}
+
+@Composable
+private fun SignatoryDrawerContent(
+    user: OtherUser,
+    onChangePasswordClick: () -> Unit,
+    onSignOutClick: () -> Unit,
+) {
+    ModalDrawerSheet {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.malasila),
+                contentDescription = "School Logo",
+                modifier = Modifier
+                    .size(100.dp)
+                    .padding(bottom = 16.dp)
+            )
+            Text(text = "Welcome,", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = user.name,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
+        Divider()
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Key, contentDescription = "Change Password") },
+            label = { Text("Change Password") },
+            selected = false,
+            onClick = onChangePasswordClick
+        )
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
+            label = { Text("Logout") },
+            selected = false,
+            onClick = onSignOutClick
+        )
+    }
+}

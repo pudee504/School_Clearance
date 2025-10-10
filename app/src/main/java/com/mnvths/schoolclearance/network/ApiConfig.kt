@@ -6,7 +6,7 @@ import android.os.Build
 object ApiConfig {
 
     // IMPORTANT: Replace this with your computer's actual local IP address
-    private const val REAL_DEVICE_IP = "192.168.1.7"
+    private const val REAL_DEVICE_IP = "192.168.1.8"
 
     private const val EMULATOR_IP = "10.0.2.2"
     private const val PORT = 3000

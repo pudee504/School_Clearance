@@ -6,11 +6,14 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mnvths.schoolclearance.data.ChangePasswordRequest
 import com.mnvths.schoolclearance.data.LoggedInUser
 import com.mnvths.schoolclearance.data.OtherUser
 import com.mnvths.schoolclearance.data.StudentProfile
 import com.mnvths.schoolclearance.network.KtorClient
+import io.ktor.client.call.body
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
@@ -74,8 +77,35 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun changePassword(
+        userId: Int,
+        oldPassword: String,
+        newPassword: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: HttpResponse = client.put("/api/users/change-password") {
+                    contentType(ContentType.Application.Json)
+                    setBody(ChangePasswordRequest(userId, oldPassword, newPassword))
+                }
+                if (response.status.isSuccess()) {
+                    onSuccess()
+                } else {
+                    val errorBody = response.body<JsonObject>()
+                    val errorMessage = errorBody["error"]?.jsonPrimitive?.content ?: "An unknown error occurred."
+                    onError(errorMessage)
+                }
+            } catch (e: Exception) {
+                onError("Could not connect to the server.")
+            }
+        }
+    }
+
     fun logout() {
         _loggedInUser.value = null
         _isUserLoggedIn.value = false
     }
+
 }
