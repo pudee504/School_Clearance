@@ -15,6 +15,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber // --- LOGGING ADDED ---
 
 class SubjectViewModel : ViewModel() {
     private val client = KtorClient.httpClient
@@ -35,10 +36,16 @@ class SubjectViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching grade levels.")
             try {
                 _gradeLevels.value = client.get("/curriculum/grade-levels").body()
+                // --- LOGGING ADDED ---
+                Timber.i("Successfully fetched %d grade levels.", _gradeLevels.value.size)
             } catch (e: Exception) {
                 _error.value = "Failed to load grade levels: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching grade levels.")
             } finally {
                 _isLoading.value = false
             }
@@ -50,9 +57,13 @@ class SubjectViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching subjects for grade level ID: %d, semester: %d", gradeLevelId, semester)
             try {
                 // The semester is now passed as a query parameter to the API call.
                 val rawSubjects: List<CurriculumManagementSubject> = client.get("/curriculum/$gradeLevelId/subjects?semester=$semester").body()
+                // --- LOGGING ADDED ---
+                Timber.d("Fetched %d raw subjects from API.", rawSubjects.size)
 
                 // De-duplication logic for SHS is still necessary and works correctly here.
                 if (gradeLevelId > 4) { // Apply only for SHS
@@ -64,9 +75,12 @@ class SubjectViewModel : ViewModel() {
                 } else {
                     _managementSubjects.value = rawSubjects
                 }
-
+                // --- LOGGING ADDED ---
+                Timber.i("Processed and loaded %d subjects into state.", _managementSubjects.value.size)
             } catch (e: Exception) {
                 _error.value = "Failed to load subjects: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching subjects for grade level.")
             } finally {
                 _isLoading.value = false
             }
@@ -84,6 +98,8 @@ class SubjectViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to add subject '%s' to curriculum.", name)
             try {
                 val requestBody = AddSubjectWithGradeRequest(
                     subjectName = name,
@@ -97,13 +113,20 @@ class SubjectViewModel : ViewModel() {
                     setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully added subject '%s' to curriculum.", name)
                     onSuccess()
                     fetchSubjectsForGradeLevel(gradeLevelId, semester)
                 } else {
                     val errorBody = response.body<Map<String, String>>()
-                    onError(errorBody["error"] ?: "Failed to add subject.")
+                    val errorMessage = errorBody["error"] ?: "Failed to add subject."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to add subject. Server error: %s", errorMessage)
+                    onError(errorMessage)
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during add subject to curriculum network call.")
                 onError("Network error: ${e.message}")
             }
         }
@@ -111,19 +134,28 @@ class SubjectViewModel : ViewModel() {
 
     fun setRequirementStatus(requirementId: Int, status: String, gradeLevelId: Int, semester: Int, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Setting requirement ID %d to status '%s'", requirementId, status)
             try {
                 val response = client.patch("/curriculum/requirements/$requirementId/status") {
                     contentType(ContentType.Application.Json)
                     setBody(UpdateRequirementStatusRequest(status))
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully set requirement status.")
                     onSuccess()
                     fetchSubjectsForGradeLevel(gradeLevelId, semester) // Refresh with the current semester
                 } else {
                     val errorBody = response.body<Map<String, String>>()
-                    onError(errorBody["error"] ?: "Failed to update status.")
+                    val errorMessage = errorBody["error"] ?: "Failed to update status."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to set requirement status. Server error: %s", errorMessage)
+                    onError(errorMessage)
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error setting requirement status.")
                 onError("Network error: ${e.message}")
             }
         }

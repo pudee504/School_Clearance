@@ -20,6 +20,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import timber.log.Timber // --- LOGGING ADDED ---
 
 class AssignmentViewModel : ViewModel() {
     private val client = KtorClient.httpClient
@@ -57,15 +58,23 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Loading available sections for subject ID: %d", subjectId)
             try {
                 val response: HttpResponse = client.get("/assignments/available-sections/$signatoryId/$subjectId")
                 if (response.status.isSuccess()) {
                     _availableSections.value = response.body()
+                    // --- LOGGING ADDED ---
+                    Timber.i("Found %d available sections.", _availableSections.value.size)
                 } else {
                     _error.value = "Failed to load available sections."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to load available sections. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error loading available sections.")
             } finally {
                 _isLoading.value = false
             }
@@ -82,6 +91,8 @@ class AssignmentViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Assigning %d sections to subject ID: %d", sectionIds.size, subjectId)
             try {
                 val response: HttpResponse = client.post("/assignments/sections") {
                     contentType(ContentType.Application.Json)
@@ -89,12 +100,18 @@ class AssignmentViewModel : ViewModel() {
                     setBody(AssignSectionsToSubjectRequest(signatoryId, subjectId, sectionIds))
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully assigned sections to subject.")
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to assign sections to subject. Server error: %s", errorBody)
                     onError("Failed to assign sections: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during assign sections to subject network call.")
                 onError("Network error: ${e.message}")
             }
         }
@@ -104,16 +121,24 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Loading available sections for account ID: %d", accountId)
             try {
                 // We re-use the `_availableSections` state from the subject flow
                 val response: HttpResponse = client.get("/assignments/available-sections-for-account/$signatoryId/$accountId")
                 if (response.status.isSuccess()) {
                     _availableSections.value = response.body()
+                    // --- LOGGING ADDED ---
+                    Timber.i("Found %d available sections for account.", _availableSections.value.size)
                 } else {
                     _error.value = "Failed to load available sections."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to load available sections for account. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error loading available sections for account.")
             } finally {
                 _isLoading.value = false
             }
@@ -130,6 +155,8 @@ class AssignmentViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Assigning %d sections to account ID: %d", sectionIds.size, accountId)
             try {
                 val response: HttpResponse = client.post("/assignments/sections-for-account") {
                     contentType(ContentType.Application.Json)
@@ -137,12 +164,18 @@ class AssignmentViewModel : ViewModel() {
                     setBody(AssignSectionsToAccountRequest(signatoryId, accountId, sectionIds))
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully assigned sections to account.")
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to assign sections to account. Server error: %s", errorBody)
                     onError("Failed to assign sections: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during assign sections to account network call.")
                 onError("Network error: ${e.message}")
             }
         }
@@ -151,6 +184,8 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Loading subject assignment data for signatory ID: %d", signatoryId)
             try {
                 // This will run both launch blocks at the same time
                 // and wait for both to complete before continuing.
@@ -160,6 +195,8 @@ class AssignmentViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _error.value = "An unexpected error occurred: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error loading subject assignment data.")
             } finally {
                 _isLoading.value = false
             }
@@ -170,6 +207,8 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Loading account assignment data for signatory ID: %d", signatoryId)
             try {
                 coroutineScope {
                     launch { fetchAccounts() }
@@ -177,6 +216,8 @@ class AssignmentViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 _error.value = "An unexpected error occurred: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error loading account assignment data.")
             } finally {
                 _isLoading.value = false
             }
@@ -187,6 +228,8 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching all subjects.")
             try {
                 // ✅ UPDATED: Endpoint to fetch subjects
                 val response: HttpResponse = client.get("/subjects")
@@ -194,9 +237,13 @@ class AssignmentViewModel : ViewModel() {
                     _subjects.value = response.body()
                 } else {
                     _error.value = "Failed to load subjects."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch subjects. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching subjects.")
             } finally {
                 _isLoading.value = false
             }
@@ -205,6 +252,8 @@ class AssignmentViewModel : ViewModel() {
 
     private fun fetchAssignedSubjectsForSignatory(signatoryId: Int) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching assigned subjects for signatory ID: %d", signatoryId)
             try {
                 _isLoading.value = true
                 // ✅ UPDATED to match your existing server route
@@ -213,9 +262,13 @@ class AssignmentViewModel : ViewModel() {
                     _assignedSubjects.value = response.body()
                 } else {
                     _error.value = "Failed to load assigned subjects for this signatory."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch assigned subjects. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching assigned subjects.")
             } finally {
                 _isLoading.value = false
             }
@@ -226,6 +279,8 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching all class sections.")
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.get("/students/class-sections")
@@ -234,9 +289,13 @@ class AssignmentViewModel : ViewModel() {
                     _sections.value = classSections
                 } else {
                     _error.value = "Failed to load class sections."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch class sections. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching class sections.")
             } finally {
                 _isLoading.value = false
             }
@@ -250,6 +309,8 @@ class AssignmentViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Assigning subject ID %d to signatory ID %d", subjectId, signatoryId)
             try {
                 // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
                 val response: HttpResponse = client.post("/assignments/assign-subject") {
@@ -262,12 +323,18 @@ class AssignmentViewModel : ViewModel() {
                     )
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully assigned subject to signatory.")
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to assign subject to signatory. Server error: %s", errorBody)
                     onError("Failed to assign subject: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during assign subject to signatory network call.")
                 onError("Network error: ${e.message}")
             }
         }
@@ -279,17 +346,25 @@ class AssignmentViewModel : ViewModel() {
         onResult: (List<ClassSection>) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching assigned sections for subject ID %d, signatory ID %d", subjectId, signatoryId)
             try {
                 // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
                 val response: HttpResponse =
                     client.get("/assignments/sections/$signatoryId/$subjectId")
                 if (response.status.isSuccess()) {
                     val assigned: List<ClassSection> = response.body()
+                    // --- LOGGING ADDED ---
+                    Timber.i("Found %d assigned sections.", assigned.size)
                     onResult(assigned)
                 } else {
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch assigned sections. Status: %s", response.status)
                     onResult(emptyList())
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching assigned sections.")
                 onResult(emptyList())
             }
         }
@@ -303,6 +378,8 @@ class AssignmentViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Assigning %d classes to subject ID %d", sectionIds.size, subjectId)
             try {
                 // ✅ UPDATED: Endpoint for assignments. You will need to create this on your backend.
                 val response: HttpResponse = client.post("/assignments/assign-classes") {
@@ -310,12 +387,18 @@ class AssignmentViewModel : ViewModel() {
                     setBody(AssignClassesRequest(signatoryId, subjectId, sectionIds))
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully assigned classes to subject.")
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to assign classes to subject. Server error: %s", errorBody)
                     onError("Failed to assign classes: ${response.status.description}. Details: $errorBody")
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error assigning classes to subject.")
                 onError("Network error: ${e.message}")
             }
         }
@@ -329,6 +412,8 @@ class AssignmentViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Assigning %d subjects to signatory ID %d", subjects.size, signatoryId)
             var allSuccessful = true
             for (subject in subjects) {
                 try {
@@ -339,17 +424,23 @@ class AssignmentViewModel : ViewModel() {
                     }
                     if (!response.status.isSuccess()) {
                         allSuccessful = false
+                        // --- LOGGING ADDED ---
+                        Timber.w("Error assigning subject '%s'. Status: %s", subject.name, response.status)
                         onError("Error assigning ${subject.name}.")
                         break // Stop on the first error
                     }
                 } catch (e: Exception) {
                     allSuccessful = false
+                    // --- LOGGING ADDED ---
+                    Timber.e(e, "Network error while assigning subject '%s'.", subject.name)
                     onError("Network error while assigning ${subject.name}.")
                     break // Stop on the first error
                 }
             }
 
             if (allSuccessful) {
+                // --- LOGGING ADDED ---
+                Timber.i("Successfully assigned all subjects.")
                 onSuccess()
                 fetchAssignedSubjectsForSignatory(signatoryId)
             }
@@ -361,6 +452,8 @@ class AssignmentViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching all accounts.")
             try {
                 // Assuming you have an /accounts endpoint from accounts.js
                 val response: HttpResponse = client.get("/accounts")
@@ -368,9 +461,13 @@ class AssignmentViewModel : ViewModel() {
                     _accounts.value = response.body()
                 } else {
                     _error.value = "Failed to load accounts."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch accounts. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching accounts.")
             } finally {
                 _isLoading.value = false
             }
@@ -379,6 +476,8 @@ class AssignmentViewModel : ViewModel() {
 
     private fun fetchAssignedAccountsForSignatory(signatoryId: Int) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching assigned accounts for signatory ID: %d", signatoryId)
             try {
                 _isLoading.value = true
                 val response: HttpResponse = client.get("/assignments/accounts/$signatoryId")
@@ -386,9 +485,13 @@ class AssignmentViewModel : ViewModel() {
                     _assignedAccounts.value = response.body()
                 } else {
                     _error.value = "Failed to load assigned accounts for this signatory."
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch assigned accounts. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 _error.value = "Network error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching assigned accounts.")
             } finally {
                 _isLoading.value = false
             }
@@ -402,6 +505,8 @@ class AssignmentViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Assigning %d accounts to signatory ID %d", accounts.size, signatoryId)
             var allSuccessful = true
             for (account in accounts) {
                 try {
@@ -411,17 +516,23 @@ class AssignmentViewModel : ViewModel() {
                     }
                     if (!response.status.isSuccess()) {
                         allSuccessful = false
+                        // --- LOGGING ADDED ---
+                        Timber.w("Error assigning account '%s'. Status: %s", account.name, response.status)
                         onError("Error assigning ${account.name}.")
                         break
                     }
                 } catch (e: Exception) {
                     allSuccessful = false
+                    // --- LOGGING ADDED ---
+                    Timber.e(e, "Network error while assigning account '%s'.", account.name)
                     onError("Network error while assigning ${account.name}.")
                     break
                 }
             }
 
             if (allSuccessful) {
+                // --- LOGGING ADDED ---
+                Timber.i("Successfully assigned all accounts.")
                 onSuccess()
                 fetchAssignedAccountsForSignatory(signatoryId)
             }

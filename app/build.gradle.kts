@@ -40,6 +40,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -67,6 +68,7 @@ dependencies {
     implementation(libs.androidx.animation.core.lint)
     implementation("androidx.compose.material:material-icons-extended:1.6.7")
     implementation(libs.androidx.runtime)
+    implementation("com.jakewharton.timber:timber:5.0.1")
 
     // Removed OkHttp and Gson, added Ktor and Kotlinx Serialization
     val ktorVersion = "3.2.3" // Use the latest stable version

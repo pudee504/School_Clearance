@@ -99,7 +99,8 @@ data class StudentClearanceStatus(
     val firstName: String,
     val middleName: String?,
     val lastName: String,
-    val isCleared: Boolean
+    val isCleared: Boolean,
+    val isClearable: Boolean // <-- ADD THIS FIELD
 )
 
 // ✅ REPLACED: This old request model is replaced by the more detailed one below.

@@ -187,7 +187,9 @@ fun ClearanceScreen(
                     showClearAllDialog = true
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = students.any { !it.isCleared }
+                // ✅ MODIFIED: The button is now only enabled if there are students
+                // who are both uncleared AND clearable.
+                enabled = students.any { !it.isCleared && it.isClearable }
             ) {
                 Text("Clear All Not Cleared")
             }
@@ -247,7 +249,9 @@ fun StudentClearanceItem(
             }
             Switch(
                 checked = student.isCleared,
-                onCheckedChange = onStatusChange
+                onCheckedChange = onStatusChange,
+                // ✅ USE THE NEW isClearable FLAG HERE
+                enabled = student.isClearable || student.isCleared
             )
         }
     }

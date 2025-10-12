@@ -129,12 +129,13 @@ class ClearanceViewModel : ViewModel() {
 
     fun clearAllNotClearedStudents(onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            val notClearedStudentIds = _students.value
-                .filter { !it.isCleared }
+            // ✅ MODIFIED: The filter now also checks if the student is clearable.
+            val eligibleStudentIds = _students.value
+                .filter { !it.isCleared && it.isClearable }
                 .map { it.userId }
 
-            if (notClearedStudentIds.isEmpty()) {
-                onSuccess()
+            if (eligibleStudentIds.isEmpty()) {
+                onSuccess() // Nothing to do, so it's a success.
                 return@launch
             }
 
@@ -148,7 +149,7 @@ class ClearanceViewModel : ViewModel() {
                     requirementId = _requirementId!!,
                     schoolYear = _schoolYear!!,
                     term = _term!!,
-                    studentUserIds = notClearedStudentIds
+                    studentUserIds = eligibleStudentIds // Send the list of eligible students
                 )
 
                 val response: HttpResponse = client.post("/clearance/clear-multiple") {
@@ -158,8 +159,14 @@ class ClearanceViewModel : ViewModel() {
 
                 if (response.status.isSuccess()) {
                     onSuccess()
-                    // Manually update the local state for an instant UI refresh
-                    _students.value = _students.value.map { it.copy(isCleared = true) }
+                    // ✅ IMPROVED: This now correctly updates only the students who were just cleared.
+                    _students.value = _students.value.map { student ->
+                        if (student.userId in eligibleStudentIds) {
+                            student.copy(isCleared = true)
+                        } else {
+                            student
+                        }
+                    }
                 } else {
                     onError("Failed to clear all students: ${response.bodyAsText()}")
                 }

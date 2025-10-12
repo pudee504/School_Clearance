@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber // --- LOGGING ADDED ---
 
 class SectionManagementViewModel : ViewModel() {
     private val client = KtorClient.httpClient
@@ -35,6 +36,8 @@ class SectionManagementViewModel : ViewModel() {
     val gradeLevels: StateFlow<List<String>> = _gradeLevels.asStateFlow()
 
     init {
+        // --- LOGGING ADDED ---
+        Timber.i("SectionManagementViewModel initialized.")
         fetchClassSections()
         fetchAllGradeLevels()
     }
@@ -43,16 +46,24 @@ class SectionManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching class sections.")
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.get("/sections/class-sections")
                 if (response.status.isSuccess()) {
                     _classSections.value = response.body()
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully fetched ${_classSections.value.size} class sections.")
                 } else {
                     error.value = "Failed to load sections: ${response.status}"
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to fetch class sections. Status: %s", response.status)
                 }
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during fetch class sections network call.")
             } finally {
                 isLoading.value = false
             }
@@ -61,10 +72,14 @@ class SectionManagementViewModel : ViewModel() {
 
     fun fetchAllGradeLevels() {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching all grade levels.")
             try {
                 // ✅ UPDATED
                 _gradeLevels.value = client.get("/sections/grade-levels").body()
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Failed to fetch grade levels.")
                 println("Failed to fetch grade levels: ${e.message}")
             }
         }
@@ -77,6 +92,8 @@ class SectionManagementViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to add section '%s' to grade '%s'.", sectionName, gradeLevel)
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.post("/sections") {
@@ -84,14 +101,20 @@ class SectionManagementViewModel : ViewModel() {
                     setBody(AddSectionRequest(gradeLevel = gradeLevel, sectionName = sectionName))
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully added section '%s'.", sectionName)
                     onSuccess()
                     fetchClassSections()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to add section. Server error: %s", errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to add section." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during add section network call.")
                 onError("Network Error: ${e.message}")
             }
         }
@@ -105,6 +128,8 @@ class SectionManagementViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to update section ID: %d", sectionId)
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.put("/sections/$sectionId") {
@@ -112,14 +137,20 @@ class SectionManagementViewModel : ViewModel() {
                     setBody(UpdateSectionRequest(gradeLevel = gradeLevel, sectionName = sectionName))
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully updated section ID: %d", sectionId)
                     onSuccess()
                     fetchClassSections()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to update section ID %d. Server error: %s", sectionId, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to update section." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during update section network call for ID: %d", sectionId)
                 onError("Network Error: ${e.message}")
             }
         }
@@ -131,18 +162,26 @@ class SectionManagementViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to delete section ID: %d", sectionId)
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.delete("/sections/$sectionId")
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully deleted section ID: %d", sectionId)
                     onSuccess()
                     fetchClassSections()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to delete section ID %d. Server error: %s", sectionId, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to delete section." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during delete section network call for ID: %d", sectionId)
                 onError("Network Error: ${e.message}")
             }
         }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import timber.log.Timber // --- LOGGING ADDED ---
 
 
 class SettingsViewModel : ViewModel() {
@@ -29,20 +30,27 @@ class SettingsViewModel : ViewModel() {
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     init {
+        // --- LOGGING ADDED ---
+        Timber.i("SettingsViewModel initialized.")
         fetchSettings()
     }
 
     fun fetchSettings() {
         viewModelScope.launch {
             _isLoading.value = true
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching app settings.")
             try {
                 // ✅ UPDATED: This MUST have /api/ because of server.js
                 val response: HttpResponse = client.get("/api/settings")
                 if (response.status.isSuccess()) {
                     _settings.value = response.body()
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully fetched app settings.")
                 }
             } catch (e: Exception) {
-                println("Error fetching settings: ${e.message}")
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error fetching settings.")
             } finally {
                 _isLoading.value = false
             }
@@ -55,6 +63,8 @@ class SettingsViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to update app settings.")
             try {
                 // ✅ UPDATED: This MUST have /api/ because of server.js
                 val response: HttpResponse = client.put("/api/settings") {
@@ -63,11 +73,17 @@ class SettingsViewModel : ViewModel() {
                 }
                 if (response.status.isSuccess()) {
                     _settings.value = newSettings
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully updated app settings.")
                     onSuccess()
                 } else {
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to update settings. Server responded with status: %s", response.status)
                     onError("Failed to update settings.")
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during update settings network call.")
                 onError("Network error: ${e.message}")
             }
         }

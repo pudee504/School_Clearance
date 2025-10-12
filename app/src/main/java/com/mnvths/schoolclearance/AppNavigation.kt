@@ -83,6 +83,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 SignatoryDashboard(
                     user = user,
                     onSignOut = {
+                        // ✅ FIX: ADD THE CALL TO THE VIEWMODEL HERE
                         authViewModel.logout()
                         navController.navigate("login") {
                             popUpTo("login") { inclusive = true }
@@ -98,6 +99,7 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                     rootNavController = navController,
                     user = user,
                     onSignOut = {
+                        // ✅ FIX: ADD THE CALL TO THE VIEWMODEL HERE
                         authViewModel.logout()
                         navController.navigate("login") { popUpTo("login") { inclusive = true } }
                     },
@@ -362,24 +364,24 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel(),
                 // We don't pass 'isAccountClearance', so it correctly defaults to 'false'
             )
         }
-/*
-        composable("addEditSubject") {
-            AddEditSubjectScreen(navController = navController, subjectId = null, initialName = null)
-        }
-        composable(
-            "addEditSubject/{subjectId}/{subjectName}",
-            arguments = listOf(
-                navArgument("subjectId") { type = NavType.IntType },
-                navArgument("subjectName") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            AddEditSubjectScreen(
-                navController = navController,
-                subjectId = backStackEntry.arguments?.getInt("subjectId"),
-                initialName = backStackEntry.arguments?.getString("subjectName")
-            )
-        }
-*/
+        /*
+                composable("addEditSubject") {
+                    AddEditSubjectScreen(navController = navController, subjectId = null, initialName = null)
+                }
+                composable(
+                    "addEditSubject/{subjectId}/{subjectName}",
+                    arguments = listOf(
+                        navArgument("subjectId") { type = NavType.IntType },
+                        navArgument("subjectName") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    AddEditSubjectScreen(
+                        navController = navController,
+                        subjectId = backStackEntry.arguments?.getInt("subjectId"),
+                        initialName = backStackEntry.arguments?.getString("subjectName")
+                    )
+                }
+        */
         composable(
             "curriculumManagement/{gradeLevelId}/{gradeLevelName}",
             arguments = listOf(

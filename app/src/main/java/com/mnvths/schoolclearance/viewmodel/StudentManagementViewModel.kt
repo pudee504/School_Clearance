@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import timber.log.Timber // --- LOGGING ADDED ---
 
 @Serializable
 data class StudentInSection(
@@ -73,6 +74,8 @@ class StudentManagementViewModel : ViewModel() {
     val studentsInSection: StateFlow<List<StudentInSection>> = _studentsInSection.asStateFlow()
 
     init {
+        // --- LOGGING ADDED ---
+        Timber.i("StudentManagementViewModel initialized.")
         fetchAllStudents()
         fetchGradeLevels()
         fetchClassSections()
@@ -83,11 +86,17 @@ class StudentManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching unassigned students.")
             try {
                 // This calls the new, efficient endpoint
                 _unassignedStudents.value = client.get("/students/unassigned").body()
+                // --- LOGGING ADDED ---
+                Timber.i("Successfully fetched ${_unassignedStudents.value.size} unassigned students.")
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Failed to fetch unassigned students.")
             } finally {
                 isLoading.value = false
             }
@@ -101,18 +110,26 @@ class StudentManagementViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             isLoading.value = true
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to unassign student ID: %s from section.", studentId)
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.put("/students/unassign/$studentId")
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully unassigned student ID: %s", studentId)
                     onSuccess()
                     fetchAllStudents()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to unassign student ID %s. Server error: %s", studentId, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to unassign student." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during unassign student network call for ID: %s", studentId)
                 onError("Network error: ${e.message}")
             } finally {
                 isLoading.value = false
@@ -132,6 +149,8 @@ class StudentManagementViewModel : ViewModel() {
                 return@launch
             }
             isLoading.value = true
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to assign %d students to section ID: %d", studentIds.size, sectionId)
             try {
                 val requestBody = AssignStudentsRequest(sectionId, studentIds)
                 // ✅ UPDATED
@@ -140,14 +159,20 @@ class StudentManagementViewModel : ViewModel() {
                     setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully assigned students to section ID: %d", sectionId)
                     onSuccess()
                     fetchAllStudents()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to assign students to section ID %d. Server error: %s", sectionId, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to assign students." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during assign students network call for section ID: %d", sectionId)
                 onError("Network error: ${e.message}")
             } finally {
                 isLoading.value = false
@@ -159,11 +184,17 @@ class StudentManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching students for section ID: %d", sectionId)
             try {
                 // ✅ UPDATED
                 _studentsInSection.value = client.get("/students/section/$sectionId").body()
+                // --- LOGGING ADDED ---
+                Timber.i("Successfully fetched %d students for section ID: %d", _studentsInSection.value.size, sectionId)
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Failed to fetch students for section ID: %d", sectionId)
             } finally {
                 isLoading.value = false
             }
@@ -171,39 +202,67 @@ class StudentManagementViewModel : ViewModel() {
     }
 
     fun clearStudentsInSection() {
+        // --- LOGGING ADDED ---
+        Timber.d("Clearing students in section from state.")
         _studentsInSection.value = emptyList()
     }
 
     fun fetchGradeLevels() = viewModelScope.launch {
+        // --- LOGGING ADDED ---
+        Timber.i("Fetching grade levels.")
         try {
             // ✅ UPDATED
             _gradeLevels.value = client.get("/curriculum/grade-levels").body()
-        } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
+        } catch (e: Exception) {
+            error.value = "Network Error: ${e.message}"
+            // --- LOGGING ADDED ---
+            Timber.e(e, "Failed to fetch grade levels.")
+        }
     }
 
     fun fetchClassSections() = viewModelScope.launch {
+        // --- LOGGING ADDED ---
+        Timber.i("Fetching class sections.")
         try {
             // ✅ UPDATED
             _classSections.value = client.get("/curriculum/sections").body()
-        } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
+        } catch (e: Exception) {
+            error.value = "Network Error: ${e.message}"
+            // --- LOGGING ADDED ---
+            Timber.e(e, "Failed to fetch class sections.")
+        }
     }
 
     fun fetchShsTracks() = viewModelScope.launch {
+        // --- LOGGING ADDED ---
+        Timber.i("Fetching SHS tracks.")
         try {
             // ✅ UPDATED
             _shsTracks.value = client.get("/curriculum/shs-tracks").body()
-        } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
+        } catch (e: Exception) {
+            error.value = "Network Error: ${e.message}"
+            // --- LOGGING ADDED ---
+            Timber.e(e, "Failed to fetch SHS tracks.")
+        }
     }
 
     fun fetchShsStrands() = viewModelScope.launch {
+        // --- LOGGING ADDED ---
+        Timber.i("Fetching SHS strands.")
         try {
             // ✅ UPDATED
             _shsStrands.value = client.get("/curriculum/shs-strands").body()
-        } catch (e: Exception) { error.value = "Network Error: ${e.message}" }
+        } catch (e: Exception) {
+            error.value = "Network Error: ${e.message}"
+            // --- LOGGING ADDED ---
+            Timber.e(e, "Failed to fetch SHS strands.")
+        }
     }
 
     fun fetchSpecializations(gradeLevelId: Int? = null, strandId: Int? = null) = viewModelScope.launch {
         isLoading.value = true
+        // --- LOGGING ADDED ---
+        Timber.i("Fetching specializations for gradeLevelId: %s, strandId: %s", gradeLevelId, strandId)
         try {
             // ✅ UPDATED
             var url = "/curriculum/specializations"
@@ -215,12 +274,16 @@ class StudentManagementViewModel : ViewModel() {
             _specializations.value = client.get(url).body()
         } catch (e: Exception) {
             error.value = "Network Error: ${e.message}"
+            // --- LOGGING ADDED ---
+            Timber.e(e, "Failed to fetch specializations.")
         } finally {
             isLoading.value = false
         }
     }
 
     fun clearSpecializations() {
+        // --- LOGGING ADDED ---
+        Timber.d("Clearing specializations from state.")
         _specializations.value = emptyList()
     }
 
@@ -228,11 +291,15 @@ class StudentManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching all students list.")
             try {
                 // ✅ UPDATED
                 _students.value = client.get("/students").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Failed to fetch all students list.")
             } finally {
                 isLoading.value = false
             }
@@ -253,6 +320,8 @@ class StudentManagementViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to add student with ID: %s", studentId)
             try {
                 val requestBody = CreateStudentRequest(
                     studentId = studentId, firstName = firstName, middleName = middleName,
@@ -266,14 +335,20 @@ class StudentManagementViewModel : ViewModel() {
                     setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully added student with ID: %s", studentId)
                     onSuccess()
                     fetchAllStudents()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to add student with ID %s. Server error: %s", studentId, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to add student." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during add student network call for ID: %s", studentId)
                 onError("Network error: ${e.message}")
             }
         }
@@ -282,16 +357,24 @@ class StudentManagementViewModel : ViewModel() {
 
     fun deleteStudent(studentId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to delete student with ID: %s", studentId)
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.delete("/students/$studentId")
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully deleted student with ID: %s", studentId)
                     onSuccess()
                     fetchAllStudents()
                 } else {
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to delete student with ID %s. Server response: %s", studentId, response.status)
                     onError(response.bodyAsText())
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during delete student network call for ID: %s", studentId)
                 onError("Network error: ${e.message}")
             }
         }
@@ -302,11 +385,15 @@ class StudentManagementViewModel : ViewModel() {
             isLoading.value = true
             _studentDetails.value = null
             error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching student details for edit for ID: %s", studentId)
             try {
                 // ✅ UPDATED
                 _studentDetails.value = client.get("/students/$studentId").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Failed to fetch student details for edit for ID: %s", studentId)
             } finally {
                 isLoading.value = false
             }
@@ -314,6 +401,8 @@ class StudentManagementViewModel : ViewModel() {
     }
 
     fun clearStudentDetails() {
+        // --- LOGGING ADDED ---
+        Timber.d("Clearing student details for edit from state.")
         _studentDetails.value = null
     }
 
@@ -321,11 +410,15 @@ class StudentManagementViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading.value = true
             error.value = null
+            // --- LOGGING ADDED ---
+            Timber.i("Fetching admin student profile for ID: %s", studentId)
             try {
                 // ✅ UPDATED
                 _adminStudentProfile.value = client.get("/students/admin-profile/$studentId").body()
             } catch (e: Exception) {
                 error.value = "Network Error: ${e.message}"
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Failed to fetch admin student profile for ID: %s", studentId)
             } finally {
                 isLoading.value = false
             }
@@ -333,6 +426,8 @@ class StudentManagementViewModel : ViewModel() {
     }
 
     fun clearAdminStudentProfile() {
+        // --- LOGGING ADDED ---
+        Timber.d("Clearing admin student profile from state.")
         _adminStudentProfile.value = null
     }
 
@@ -341,6 +436,8 @@ class StudentManagementViewModel : ViewModel() {
         onSuccess: () -> Unit, onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to update student with original ID: %s", originalStudentId)
             try {
                 // ✅ UPDATED
                 val response: HttpResponse = client.put("/students/$originalStudentId") {
@@ -348,14 +445,20 @@ class StudentManagementViewModel : ViewModel() {
                     setBody(updatedDetails)
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully updated student with original ID: %s", originalStudentId)
                     onSuccess()
                     fetchAllStudents()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to update student with original ID %s. Server error: %s", originalStudentId, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to update student." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during update student network call for ID: %s", originalStudentId)
                 onError("Network error: ${e.message}")
             }
         }
@@ -369,6 +472,8 @@ class StudentManagementViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
+            // --- LOGGING ADDED ---
+            Timber.i("Attempting to update clearance status for student %s, requirement %s, to %s", profile.id, item.requirementName, isCleared)
             try {
                 val requestBody = UpdateClearanceStatusRequest(
                     userId = profile.userId,
@@ -383,14 +488,20 @@ class StudentManagementViewModel : ViewModel() {
                     setBody(requestBody)
                 }
                 if (response.status.isSuccess()) {
+                    // --- LOGGING ADDED ---
+                    Timber.i("Successfully updated clearance status for student %s", profile.id)
                     fetchAdminStudentProfile(profile.id)
                     onSuccess()
                 } else {
                     val errorBody = response.bodyAsText()
                     val errorMessage = errorBody.substringAfter("error\":\"").substringBefore("\"")
+                    // --- LOGGING ADDED ---
+                    Timber.w("Failed to update clearance status for student %s. Server error: %s", profile.id, errorMessage.ifBlank { response.status.toString() })
                     onError(errorMessage.ifBlank { "Failed to update status." })
                 }
             } catch (e: Exception) {
+                // --- LOGGING ADDED ---
+                Timber.e(e, "Error during update clearance status network call for student: %s", profile.id)
                 onError("Network error: ${e.message}")
             }
         }
