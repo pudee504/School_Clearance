@@ -340,3 +340,9 @@ data class ChangePasswordRequest(
     val oldPassword: String,
     val newPassword: String
 )
+
+@Serializable
+data class LogoutRequest(
+    val userId: Int?,
+    val username: String?
+)

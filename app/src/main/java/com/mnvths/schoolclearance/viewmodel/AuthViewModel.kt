@@ -1,12 +1,15 @@
 package com.mnvths.schoolclearance.viewmodel
 
-import android.util.Log
+import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mnvths.schoolclearance.data.ChangePasswordRequest
 import com.mnvths.schoolclearance.data.LoggedInUser
+import com.mnvths.schoolclearance.data.LogoutRequest
 import com.mnvths.schoolclearance.data.OtherUser
 import com.mnvths.schoolclearance.data.StudentProfile
 import com.mnvths.schoolclearance.network.KtorClient
@@ -20,13 +23,15 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import timber.log.Timber // --- LOGGING ADDED ---
+import timber.log.Timber
 
-class AuthViewModel : ViewModel() {
-    // This client is now configured with the dynamic base URL from ApiConfig
+// ✅ MODIFIED: Inherit from AndroidViewModel to get application context
+class AuthViewModel(application: Application) : AndroidViewModel(application) {
+
     private val client = KtorClient.httpClient
 
     private val _loggedInUser = mutableStateOf<LoggedInUser?>(null)
@@ -38,14 +43,51 @@ class AuthViewModel : ViewModel() {
     private val _loginError = mutableStateOf<String?>(null)
     val loginError: State<String?> = _loginError
 
+    // ✅ NEW: JSON parser for storing user data
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    // ✅ NEW: SharedPreferences for session persistence
+    private val sharedPreferences: SharedPreferences =
+        application.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+
+    // ✅ NEW: This block runs when the ViewModel is first created
+    init {
+        checkUserLoggedIn()
+    }
+
+    private fun checkUserLoggedIn() {
+        // Read from storage
+        val userJson = sharedPreferences.getString("logged_in_user", null)
+        if (userJson != null) {
+            try {
+                // If user data exists, parse it and update the state
+                val jsonObject = json.decodeFromString<JsonObject>(userJson)
+                val role = jsonObject["role"]?.jsonPrimitive?.content
+                if (role == "student") {
+                    val student = json.decodeFromString<StudentProfile>(userJson)
+                    _loggedInUser.value = LoggedInUser.StudentUser(student)
+                } else {
+                    val otherUser = json.decodeFromString<OtherUser>(userJson)
+                    _loggedInUser.value = LoggedInUser.FacultyAdminUser(otherUser)
+                }
+                _isUserLoggedIn.value = true
+                Timber.i("Restored session for user with role: %s", role)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to parse stored user data.")
+                // If parsing fails, clear the bad data
+                logout()
+            }
+        } else {
+            _isUserLoggedIn.value = false
+        }
+    }
+
+
     fun login(loginId: String, password: String) {
         viewModelScope.launch {
-            _loginError.value = null // Clear previous errors
-            // --- LOGGING ADDED ---
+            _loginError.value = null
             Timber.i("Attempting to log in user: %s", loginId)
             try {
-                // ✅ UPDATED: The URL is now just the endpoint path.
-                // The base URL (http://<IP>:<PORT>) is added automatically by KtorClient.
                 val response: HttpResponse = client.post("/auth/login") {
                     contentType(ContentType.Application.Json)
                     setBody(mapOf("loginId" to loginId, "password" to password))
@@ -53,13 +95,18 @@ class AuthViewModel : ViewModel() {
 
                 if (response.status.isSuccess()) {
                     val responseText = response.bodyAsText()
-                    val json = Json { ignoreUnknownKeys = true; isLenient = true }
                     val jsonObject = json.decodeFromString<JsonObject>(responseText)
                     val role = jsonObject["role"]?.jsonPrimitive?.content
 
-                    // --- LOGGING ADDED ---
                     Timber.i("Login successful for user '%s' with role: %s", loginId, role)
 
+                    // ✅ NEW: Save user data to SharedPreferences on successful login
+                    with(sharedPreferences.edit()) {
+                        putString("logged_in_user", responseText)
+                        apply()
+                    }
+
+                    // This part remains the same
                     if (role == "student") {
                         val student = json.decodeFromString<StudentProfile>(responseText)
                         _loggedInUser.value = LoggedInUser.StudentUser(student)
@@ -70,21 +117,63 @@ class AuthViewModel : ViewModel() {
                     _isUserLoggedIn.value = true
                     _loginError.value = null
                 } else {
-                    // --- LOGGING ADDED ---
                     Timber.w("Login failed for user '%s'. Server responded with status: %s", loginId, response.status)
                     _loginError.value = "Login failed: Invalid credentials."
                     _isUserLoggedIn.value = false
                 }
             } catch (e: Exception) {
-                // --- LOGGING ADDED ---
                 Timber.e(e, "Login network request failed for user '%s'", loginId)
-                // Provide a more user-friendly error for network issues
                 _loginError.value = "Unable to connect to the server. Please check your network."
                 _isUserLoggedIn.value = false
             }
         }
     }
 
+    fun logout() {
+        viewModelScope.launch {
+            try {
+                val userToLogOut = loggedInUser.value
+                val userId = when (userToLogOut) {
+                    is LoggedInUser.StudentUser -> userToLogOut.student.userId
+                    is LoggedInUser.FacultyAdminUser -> userToLogOut.user.id
+                    else -> null
+                }
+                val username = when (userToLogOut) {
+                    is LoggedInUser.StudentUser -> userToLogOut.student.id
+                    is LoggedInUser.FacultyAdminUser -> userToLogOut.user.username
+                    else -> null
+                }
+
+                if (userId != null) {
+                    Timber.i("Notifying server of logout for user ID: %s", userId)
+
+                    // ✅ 1. Create an instance of your new data class
+                    val logoutPayload = LogoutRequest(userId = userId, username = username)
+
+                    client.post("/auth/logout") {
+                        contentType(ContentType.Application.Json)
+                        // ✅ 2. Set the body to your new type-safe object
+                        setBody(logoutPayload)
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to notify server of logout. Logging out locally anyway.")
+            } finally {
+                // ✅ NEW: Clear the user data from SharedPreferences on logout
+                with(sharedPreferences.edit()) {
+                    remove("logged_in_user")
+                    apply()
+                }
+
+                // Reset the in-memory state
+                Timber.i("User logged out locally and session cleared.")
+                _loggedInUser.value = null
+                _isUserLoggedIn.value = false
+            }
+        }
+    }
+
+    // changePassword function remains unchanged
     fun changePassword(
         userId: Int,
         oldPassword: String,
@@ -93,67 +182,25 @@ class AuthViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
-            // --- LOGGING ADDED ---
             Timber.i("Attempting to change password for userId: %d", userId)
             try {
-                val response: HttpResponse = client.put("/api/users/change-password") {
+                val response: HttpResponse = client.put("/users/change-password") {
                     contentType(ContentType.Application.Json)
                     setBody(ChangePasswordRequest(userId, oldPassword, newPassword))
                 }
                 if (response.status.isSuccess()) {
-                    // --- LOGGING ADDED ---
                     Timber.i("Password changed successfully for userId: %d", userId)
                     onSuccess()
                 } else {
                     val errorBody = response.body<JsonObject>()
                     val errorMessage = errorBody["error"]?.jsonPrimitive?.content ?: "An unknown error occurred."
-                    // --- LOGGING ADDED ---
                     Timber.w("Failed to change password for userId %d. Server error: %s", userId, errorMessage)
                     onError(errorMessage)
                 }
             } catch (e: Exception) {
-                // --- LOGGING ADDED ---
                 Timber.e(e, "Change password network request failed for userId: %d", userId)
                 onError("Could not connect to the server.")
             }
         }
     }
-
-    fun logout() {
-        viewModelScope.launch {
-            try {
-                // --- ADD THIS API CALL ---
-                // We'll try to inform the server about the logout.
-                val userToLogOut = loggedInUser.value
-                val userId = when(userToLogOut) {
-                    is LoggedInUser.StudentUser -> userToLogOut.student.userId
-                    is LoggedInUser.FacultyAdminUser -> userToLogOut.user.id
-                    else -> null
-                }
-                val username = when(userToLogOut) {
-                    is LoggedInUser.StudentUser -> userToLogOut.student.id
-                    is LoggedInUser.FacultyAdminUser -> userToLogOut.user.username
-                    else -> null
-                }
-
-                if (userId != null) {
-                    Timber.i("Notifying server of logout for user ID: %s", userId)
-                    client.post("/auth/logout") {
-                        contentType(ContentType.Application.Json)
-                        setBody(mapOf("userId" to userId, "username" to username))
-                    }
-                }
-            } catch (e: Exception) {
-                // Log the error, but don't stop the user from logging out locally.
-                Timber.e(e, "Failed to notify server of logout. Logging out locally anyway.")
-            } finally {
-                // --- THIS IS YOUR ORIGINAL LOGIC ---
-                // It now runs after the API call attempts.
-                Timber.i("User logged out locally.")
-                _loggedInUser.value = null
-                _isUserLoggedIn.value = false
-            }
-        }
-    }
-
 }
