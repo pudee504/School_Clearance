@@ -85,6 +85,10 @@ fun SignatoryDashboard(
                 onSignOutClick = {
                     scope.launch { drawerState.close() }
                     onSignOut()
+                },
+                onReportsClick = {
+                    scope.launch { drawerState.close() }
+                    innerNavController.navigate("reports")
                 }
             )
         }
@@ -324,6 +328,7 @@ private fun SignatoryDrawerContent(
     user: OtherUser,
     onChangePasswordClick: () -> Unit,
     onSignOutClick: () -> Unit,
+    onReportsClick: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(
@@ -358,7 +363,7 @@ private fun SignatoryDrawerContent(
             icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
             label = { Text("Reports") },
             selected = false,
-            onClick = { innerNavController.navigate("reports") }
+            onClick = onReportsClick
         )
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },

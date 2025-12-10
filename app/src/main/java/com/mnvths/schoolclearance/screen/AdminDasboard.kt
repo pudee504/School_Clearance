@@ -82,6 +82,10 @@ fun AdminDashboard(
                 onSignOutClick = {
                     scope.launch { drawerState.close() }
                     onSignOut()
+                },
+                onReportsClick = {
+                    scope.launch { drawerState.close() }
+                    rootNavController.navigate("reports")
                 }
             )
         }
@@ -163,6 +167,7 @@ fun AdminDrawerContent(
     user: OtherUser,
     onSettingsClick: () -> Unit,
     onSignOutClick: () -> Unit,
+    onReportsClick: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(
@@ -200,7 +205,7 @@ fun AdminDrawerContent(
             icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
             label = { Text("Reports") },
             selected = false,
-            onClick = { rootNavController.navigate("reports") }
+            onClick = onReportsClick
         )
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
