@@ -357,6 +357,27 @@ fun AppNavigation(
         }
 
         composable(
+            route = "clearance_account/{sectionId}/{accountId}/{gradeLevel}/{sectionName}/{accountName}",
+            arguments = listOf(
+                navArgument("sectionId") { type = NavType.IntType },
+                navArgument("accountId") { type = NavType.IntType },
+                navArgument("gradeLevel") { type = NavType.StringType },
+                navArgument("sectionName") { type = NavType.StringType },
+                navArgument("accountName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            ClearanceScreen(
+                navController = navController,
+                sectionId = backStackEntry.arguments?.getInt("sectionId") ?: 0,
+                subjectId = backStackEntry.arguments?.getInt("accountId") ?: 0, // Note: subjectId is used for accountId here
+                gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
+                sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
+                subjectName = backStackEntry.arguments?.getString("accountName") ?: "",
+                isAccountClearance = true
+            )
+        }
+
+        composable(
             route = "clearanceScreen/{sectionId}/{subjectId}/{gradeLevel}/{sectionName}/{subjectName}",
             arguments = listOf(
                 navArgument("sectionId") { type = NavType.IntType },
@@ -389,6 +410,9 @@ fun AppNavigation(
                 gradeLevelId = backStackEntry.arguments?.getInt("gradeLevelId")!!,
                 gradeLevelName = backStackEntry.arguments?.getString("gradeLevelName")!!
             )
+        }
+        composable("reports") {
+            ReportsScreen(navController = navController)
         }
     }
 }

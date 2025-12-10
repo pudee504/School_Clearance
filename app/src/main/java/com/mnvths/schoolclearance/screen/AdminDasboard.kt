@@ -197,6 +197,12 @@ fun AdminDrawerContent(
             onClick = onSettingsClick
         )
         NavigationDrawerItem(
+            icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
+            label = { Text("Reports") },
+            selected = false,
+            onClick = { rootNavController.navigate("reports") }
+        )
+        NavigationDrawerItem(
             icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
             label = { Text("Logout") },
             selected = false,

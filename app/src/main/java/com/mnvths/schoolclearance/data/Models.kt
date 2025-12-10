@@ -346,3 +346,20 @@ data class LogoutRequest(
     val userId: Int?,
     val username: String?
 )
+
+@Serializable
+data class FullyClearedStudent(
+    val userId: Int,
+    val studentId: String,
+    val firstName: String,
+    val middleName: String?,
+    val lastName: String,
+    val gradeLevel: String,
+    val sectionName: String
+)
+
+@Serializable
+data class ReportsResponse(
+    val totalCount: Int,
+    val students: List<FullyClearedStudent>
+)

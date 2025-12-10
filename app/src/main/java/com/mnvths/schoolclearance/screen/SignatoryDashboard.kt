@@ -207,6 +207,9 @@ private fun SignatoryNavHost(
                 showFab = false
             )
         }
+        composable("reports") {
+            ReportsScreen(navController = innerNavController)
+        }
     }
 }
 
@@ -350,6 +353,12 @@ private fun SignatoryDrawerContent(
             label = { Text("Change Password") },
             selected = false,
             onClick = onChangePasswordClick
+        )
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
+            label = { Text("Reports") },
+            selected = false,
+            onClick = { innerNavController.navigate("reports") }
         )
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
