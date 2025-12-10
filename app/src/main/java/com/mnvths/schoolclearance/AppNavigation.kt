@@ -372,7 +372,8 @@ fun AppNavigation(
                 subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0,
                 gradeLevel = backStackEntry.arguments?.getString("gradeLevel") ?: "",
                 sectionName = backStackEntry.arguments?.getString("sectionName") ?: "",
-                subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                subjectName = backStackEntry.arguments?.getString("subjectName") ?: "",
+                isAccountClearance = false
             )
         }
 
