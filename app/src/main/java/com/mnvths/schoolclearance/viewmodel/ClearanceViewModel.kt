@@ -44,14 +44,16 @@ class ClearanceViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // ✅ UPDATED: The endpoint URL now matches our new backend route
-                val response: SignatoryClearanceResponse = client.get("/clearance/students/$sectionId/$subjectId").body()
-
-                _students.value = response.students
-                _schoolYear = response.schoolYear
-                _term = response.term
-                _requirementId = response.requirementId
-
+                val response: HttpResponse = client.get("/clearance/students/$sectionId/$subjectId")
+                if (response.status.isSuccess()) {
+                    val clearanceResponse: SignatoryClearanceResponse = response.body()
+                    _students.value = clearanceResponse.students
+                    _schoolYear = clearanceResponse.schoolYear
+                    _term = clearanceResponse.term
+                    _requirementId = clearanceResponse.requirementId
+                } else {
+                    _error.value = "Error: ${response.bodyAsText()}"
+                }
             } catch (e: Exception) {
                 _error.value = "Error fetching students: ${e.message}"
             } finally {
@@ -111,14 +113,16 @@ class ClearanceViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // This endpoint URL matches our new backend route
-                val response: SignatoryClearanceResponse = client.get("/clearance/students-account/$sectionId/$accountId").body()
-
-                _students.value = response.students
-                _schoolYear = response.schoolYear
-                _term = response.term
-                _requirementId = response.requirementId
-
+                val response: HttpResponse = client.get("/clearance/students-account/$sectionId/$accountId")
+                if (response.status.isSuccess()) {
+                    val clearanceResponse: SignatoryClearanceResponse = response.body()
+                    _students.value = clearanceResponse.students
+                    _schoolYear = clearanceResponse.schoolYear
+                    _term = clearanceResponse.term
+                    _requirementId = clearanceResponse.requirementId
+                } else {
+                    _error.value = "Error: ${response.bodyAsText()}"
+                }
             } catch (e: Exception) {
                 _error.value = "Error fetching students: ${e.message}"
             } finally {
