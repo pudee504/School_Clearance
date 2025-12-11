@@ -1,26 +1,42 @@
 package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.AssignedAccount
 import com.mnvths.schoolclearance.data.AssignedSubject
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
+
+// Brand Colors
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+private val BackgroundGray = Color(0xFFF5F5F5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,15 +49,14 @@ fun SignatoryDetailsScreen(
 ) {
     val context = LocalContext.current
     val assignedSubjects by viewModel.assignedSubjects
-    // ✅ Get assigned accounts from the view model
     val assignedAccounts by viewModel.assignedAccounts
     val isLoading by viewModel.isLoading
     val error by viewModel.error
 
-    // ✅ State for managing the new assignment menu
+    // Menu States
     var showAssignMenu by remember { mutableStateOf(false) }
 
-    // State for managing unassignment dialogs
+    // Unassign Dialog States
     var showUnassignSubjectDialog by remember { mutableStateOf(false) }
     var subjectToUnassign by remember { mutableStateOf<AssignedSubject?>(null) }
     var showUnassignAccountDialog by remember { mutableStateOf(false) }
@@ -49,48 +64,58 @@ fun SignatoryDetailsScreen(
 
 
     LaunchedEffect(signatoryId) {
-        // ✅ Fetch both subjects and accounts when the screen loads
         viewModel.fetchAssignedSubjects(signatoryId)
         viewModel.fetchAssignedAccounts(signatoryId)
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Signatory Detail") },
+            CenterAlignedTopAppBar(
+                title = { Text("Signatory Profile", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = SchoolBlue,
+                    navigationIconContentColor = SchoolBlue
+                )
             )
         },
+        containerColor = BackgroundGray,
         floatingActionButton = {
-            // ✅ Wrap FAB in a Box to anchor the dropdown menu
             Box {
-                FloatingActionButton(
-                    onClick = { showAssignMenu = true }
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Assign New")
-                }
+                ExtendedFloatingActionButton(
+                    onClick = { showAssignMenu = true },
+                    containerColor = SchoolBlue,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("Assign Duty") }
+                )
 
                 DropdownMenu(
                     expanded = showAssignMenu,
-                    onDismissRequest = { showAssignMenu = false }
+                    onDismissRequest = { showAssignMenu = false },
+                    modifier = Modifier.background(Color.White)
                 ) {
                     DropdownMenuItem(
                         text = { Text("Assign Subject") },
                         onClick = {
                             navController.navigate("assignSubjectToSignatory/$signatoryId/$signatoryName")
                             showAssignMenu = false
-                        }
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.Book, null, tint = SchoolBlue) }
                     )
+                    Divider()
                     DropdownMenuItem(
                         text = { Text("Assign Account") },
                         onClick = {
                             navController.navigate("assignAccountToSignatory/$signatoryId/$signatoryName")
                             showAssignMenu = false
-                        }
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.AccountBalance, null, tint = SchoolBlue) }
                     )
                 }
             }
@@ -100,188 +125,260 @@ fun SignatoryDetailsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
         ) {
-            Text(signatoryName, style = MaterialTheme.typography.headlineMedium)
-            Text(
-                text = "Username: $username",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Divider(modifier = Modifier.padding(vertical = 16.dp))
+            // --- Profile Header ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(SchoolBlue),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = signatoryName.take(2).uppercase(),
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = signatoryName,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "@$username",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = SchoolBlue)
                 }
             } else if (error != null) {
-                Text(
-                    text = "Error: $error",
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "Error: $error", color = SchoolRed)
+                }
             } else {
-                // Using a Column with two LazyColumns for simplicity
-                // For very long lists, a single LazyColumn with different item types would be more performant
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Assigned Subjects
-                    item {
-                        Text(
-                            text = "Assigned Subjects",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    if (assignedSubjects.isEmpty()) {
-                        item { Text("No subjects have been assigned yet.", modifier = Modifier.padding(bottom = 16.dp)) }
-                    } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // --- Subjects Section ---
+                    if (assignedSubjects.isNotEmpty()) {
+                        item { HeaderLabel("Academic Subjects") }
                         items(assignedSubjects) { subject ->
-                            SubjectListItem(
-                                subject = subject,
-                                onUnassignClicked = {
+                            ResponsibilityCard(
+                                title = subject.subjectName,
+                                subtitle = "Manage Sections",
+                                icon = Icons.Outlined.Book,
+                                onClick = {
+                                    navController.navigate("assignedSections/${signatoryId}/${subject.subjectId}/${subject.subjectName}")
+                                },
+                                onUnassign = {
                                     subjectToUnassign = subject
                                     showUnassignSubjectDialog = true
-                                },
-                                // ✅ PASS THE NAVIGATION ACTION
-                                onItemClicked = {
-                                    navController.navigate("assignedSections/${signatoryId}/${subject.subjectId}/${subject.subjectName}")
                                 }
                             )
                         }
                     }
 
-                    // Spacer between sections
-                    item {
-                        Divider(modifier = Modifier.padding(vertical = 16.dp))
-                    }
-
-                    // ✅ Assigned Accounts
-                    item {
-                        Text(
-                            text = "Assigned Accounts",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    if (assignedAccounts.isEmpty()) {
-                        item { Text("No accounts have been assigned yet.") }
-                    } else {
+                    // --- Accounts Section ---
+                    if (assignedAccounts.isNotEmpty()) {
+                        item { HeaderLabel("Administrative Accounts") }
                         items(assignedAccounts) { account ->
-                            AccountListItem(
-                                account = account,
-                                onUnassignClicked = {
+                            ResponsibilityCard(
+                                title = account.accountName,
+                                subtitle = "Manage Account Clearance",
+                                icon = Icons.Outlined.AccountBalance,
+                                onClick = {
+                                    navController.navigate("assignedSectionsForAccount/${signatoryId}/${account.accountId}/${account.accountName}")
+                                },
+                                onUnassign = {
                                     accountToUnassign = account
                                     showUnassignAccountDialog = true
-                                },
-                                // ✅ REPLACE the Toast with this navigation call
-                                onItemClicked = {
-                                    navController.navigate("assignedSectionsForAccount/${signatoryId}/${account.accountId}/${account.accountName}")
                                 }
                             )
                         }
                     }
+
+                    // Empty State
+                    if (assignedSubjects.isEmpty() && assignedAccounts.isEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("No duties assigned yet.", style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
+                                Text("Tap 'Assign Duty' to get started.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                            }
+                        }
+                    }
+
+                    item { Spacer(modifier = Modifier.height(64.dp)) }
                 }
             }
         }
     }
 
-    // Confirmation Dialog for Unassigning a Subject
+    // --- Dialogs ---
+
     if (showUnassignSubjectDialog && subjectToUnassign != null) {
-        AlertDialog(
-            onDismissRequest = { showUnassignSubjectDialog = false },
-            title = { Text("Confirm Unassignment") },
-            text = { Text("Are you sure you want to unassign '${subjectToUnassign?.subjectName}'?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        subjectToUnassign?.let {
-                            viewModel.unassignSubject(
-                                signatoryId = signatoryId,
-                                subjectId = it.subjectId,
-                                onSuccess = { Toast.makeText(context, "Subject unassigned", Toast.LENGTH_SHORT).show() },
-                                onError = { errorMsg -> Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show() }
-                            )
-                        }
-                        showUnassignSubjectDialog = false
-                    }
-                ) { Text("Confirm", color = MaterialTheme.colorScheme.error) }
+        UnassignDialog(
+            title = "Unassign Subject?",
+            message = "Remove '${subjectToUnassign?.subjectName}' from this signatory?",
+            onConfirm = {
+                subjectToUnassign?.let {
+                    viewModel.unassignSubject(
+                        signatoryId = signatoryId,
+                        subjectId = it.subjectId,
+                        onSuccess = { Toast.makeText(context, "Subject unassigned", Toast.LENGTH_SHORT).show() },
+                        onError = { errorMsg -> Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show() }
+                    )
+                }
+                showUnassignSubjectDialog = false
             },
-            dismissButton = { TextButton(onClick = { showUnassignSubjectDialog = false }) { Text("Cancel") } }
+            onDismiss = { showUnassignSubjectDialog = false }
         )
     }
 
-    // ✅ Confirmation Dialog for Unassigning an Account
     if (showUnassignAccountDialog && accountToUnassign != null) {
-        AlertDialog(
-            onDismissRequest = { showUnassignAccountDialog = false },
-            title = { Text("Confirm Unassignment") },
-            text = { Text("Are you sure you want to unassign '${accountToUnassign?.accountName}'?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        accountToUnassign?.let {
-                            viewModel.unassignAccount(
-                                signatoryId = signatoryId,
-                                accountId = it.accountId,
-                                onSuccess = { Toast.makeText(context, "Account unassigned", Toast.LENGTH_SHORT).show() },
-                                onError = { errorMsg -> Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show() }
-                            )
-                        }
-                        showUnassignAccountDialog = false
-                    }
-                ) { Text("Confirm", color = MaterialTheme.colorScheme.error) }
+        UnassignDialog(
+            title = "Unassign Account?",
+            message = "Remove '${accountToUnassign?.accountName}' from this signatory?",
+            onConfirm = {
+                accountToUnassign?.let {
+                    viewModel.unassignAccount(
+                        signatoryId = signatoryId,
+                        accountId = it.accountId,
+                        onSuccess = { Toast.makeText(context, "Account unassigned", Toast.LENGTH_SHORT).show() },
+                        onError = { errorMsg -> Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show() }
+                    )
+                }
+                showUnassignAccountDialog = false
             },
-            dismissButton = { TextButton(onClick = { showUnassignAccountDialog = false }) { Text("Cancel") } }
+            onDismiss = { showUnassignAccountDialog = false }
         )
     }
 }
 
+// --- Helpers ---
+
 @Composable
-fun SubjectListItem(
-    subject: AssignedSubject,
-    onUnassignClicked: () -> Unit,
-    onItemClicked: () -> Unit
+private fun HeaderLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = Color.Gray,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun ResponsibilityCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    onUnassign: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+
     Card(
-        onClick = onItemClicked, // ✅ Make the card clickable
-        modifier = Modifier.fillMaxWidth()
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = subject.subjectName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            Box {
-                IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More options") }
-                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                    DropdownMenuItem(text = { Text("Unassign") }, onClick = { onUnassignClicked(); menuExpanded = false })
-                }
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(SchoolBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = SchoolBlue)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            IconButton(onClick = { menuExpanded = true }) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "Options", tint = Color.Gray)
+            }
+
+            // Context Menu inside the card
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                modifier = Modifier.background(Color.White)
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Unassign", color = SchoolRed) },
+                    onClick = {
+                        onUnassign()
+                        menuExpanded = false
+                    },
+                    leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = SchoolRed) }
+                )
             }
         }
     }
 }
 
-// ✅ New Composable for displaying an assigned account item
 @Composable
-fun AccountListItem(
-    account: AssignedAccount,
-    onUnassignClicked: () -> Unit,
-    onItemClicked: () -> Unit
+private fun UnassignDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
-    Card(
-        onClick = onItemClicked, // ✅ Make the card clickable
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = account.accountName, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            Box {
-                IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More options") }
-                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                    DropdownMenuItem(text = { Text("Unassign") }, onClick = { onUnassignClicked(); menuExpanded = false })
-                }
-            }
-        }
-    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Outlined.Delete, null, tint = SchoolRed) },
+        title = { Text(title) },
+        text = { Text(message, textAlign = TextAlign.Center) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = SchoolRed)
+            ) { Text("Unassign") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+        containerColor = Color.White
+    )
 }

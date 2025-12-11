@@ -1,23 +1,44 @@
 package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.StudentListItem
 import com.mnvths.schoolclearance.viewmodel.StudentManagementViewModel
+
+// Brand Colors
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+private val BackgroundGray = Color(0xFFF5F5F5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,115 +48,230 @@ fun AssignStudentScreen(
     viewModel: StudentManagementViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    // ✅ 1. Use the correct state variable for unassigned students
     val unassignedStudents by viewModel.unassignedStudents.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
-    var selectedStudentIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
-    // ✅ 2. Call the specific function to fetch only the students we need
+    // State
+    var selectedStudentIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    // Initial Fetch
     LaunchedEffect(Unit) {
         viewModel.fetchUnassignedStudents()
     }
 
+    // Filter Logic
+    val filteredStudents = remember(unassignedStudents, searchQuery) {
+        unassignedStudents
+            .filter { student ->
+                val fullName = "${student.firstName} ${student.lastName}"
+                student.id.contains(searchQuery, ignoreCase = true) ||
+                        fullName.contains(searchQuery, ignoreCase = true)
+            }
+            .sortedBy { it.lastName }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Assign Students") },
+            CenterAlignedTopAppBar(
+                title = { Text("Assign Students", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = SchoolBlue,
+                    navigationIconContentColor = SchoolBlue
+                )
             )
         },
-        bottomBar = {
-            Button(
-                onClick = {
-                    viewModel.assignStudentsToSection(
-                        sectionId = sectionId,
-                        studentIds = selectedStudentIds.toList(),
-                        onSuccess = {
-                            Toast.makeText(context, "Students assigned successfully!", Toast.LENGTH_SHORT).show()
-                            navController.popBackStack()
-                        },
-                        onError = { error ->
-                            Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
-                        }
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                enabled = selectedStudentIds.isNotEmpty() && !isLoading
+        containerColor = BackgroundGray,
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = selectedStudentIds.isNotEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text("Assign ${selectedStudentIds.size} Student(s)")
-                }
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        viewModel.assignStudentsToSection(
+                            sectionId = sectionId,
+                            studentIds = selectedStudentIds.toList(),
+                            onSuccess = {
+                                Toast.makeText(context, "${selectedStudentIds.size} students assigned!", Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            },
+                            onError = { error ->
+                                Toast.makeText(context, "Error: $error", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    },
+                    containerColor = SchoolBlue,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Filled.PersonAdd, null) },
+                    text = { Text("Assign (${selectedStudentIds.size})") }
+                )
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // ✅ 3. Add a loading indicator for a better user experience
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (unassignedStudents.isEmpty()) {
-                Text(
-                    text = "There are no students without a section and grade level.",
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
+            // Search Bar Area
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search Name or LRN...") },
+                    leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SchoolBlue,
+                        unfocusedBorderColor = Color.LightGray
+                    )
                 )
+            }
+
+            // Content Area
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = SchoolBlue)
+                }
+            } else if (unassignedStudents.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                        Icon(Icons.Outlined.Person, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "No unassigned students found.",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.Gray
+                        )
+                        Text(
+                            text = "All students are currently assigned to a section.",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.LightGray
+                        )
+                    }
+                }
+            } else if (filteredStudents.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No matches found for '$searchQuery'", color = Color.Gray)
+                }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(unassignedStudents, key = { it.id }) { student ->
-                        SelectableStudentRow(
+                    item {
+                        Text(
+                            text = "${filteredStudents.size} AVAILABLE STUDENTS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+                        )
+                    }
+
+                    items(filteredStudents, key = { it.id }) { student ->
+                        val isSelected = selectedStudentIds.contains(student.id)
+                        SelectableStudentCard(
                             student = student,
-                            isSelected = student.id in selectedStudentIds,
-                            onSelect = {
-                                selectedStudentIds = if (it) {
-                                    selectedStudentIds + student.id
-                                } else {
+                            isSelected = isSelected,
+                            onToggle = {
+                                selectedStudentIds = if (isSelected) {
                                     selectedStudentIds - student.id
+                                } else {
+                                    selectedStudentIds + student.id
                                 }
                             }
                         )
                     }
+                    // Space for FAB
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
         }
     }
 }
 
-// Your SelectableStudentRow composable is already correct and needs no changes.
+// Renamed and Restyled Row
 @Composable
-fun SelectableStudentRow(
+fun SelectableStudentCard(
     student: StudentListItem,
     isSelected: Boolean,
-    onSelect: (Boolean) -> Unit
+    onToggle: () -> Unit
 ) {
-    Row(
+    val backgroundColor by animateColorAsState(if (isSelected) SchoolBlue.copy(alpha = 0.05f) else Color.White)
+    val borderColor by animateColorAsState(if (isSelected) SchoolBlue else Color.Transparent)
+
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect(!isSelected) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .border(if (isSelected) 2.dp else 0.dp, borderColor, RoundedCornerShape(12.dp))
+            .clickable(onClick = onToggle),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = if(isSelected) 4.dp else 1.dp)
     ) {
-        Checkbox(
-            checked = isSelected,
-            onCheckedChange = null // Click is handled by the row
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = "${student.lastName}, ${student.firstName}",
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            //  Initials Avatar
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if(isSelected) SchoolBlue else SchoolBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${student.firstName.take(1)}${student.lastName.take(1)}",
+                    color = if(isSelected) Color.White else SchoolBlue,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${student.lastName}, ${student.firstName}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    color = if (isSelected) SchoolBlue else Color.Black
+                )
+                Text(
+                    text = "LRN: ${student.id}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = { onToggle() },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = SchoolBlue,
+                    uncheckedColor = Color.LightGray
+                )
+            )
+        }
     }
 }

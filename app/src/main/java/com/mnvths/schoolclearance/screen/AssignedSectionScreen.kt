@@ -1,26 +1,39 @@
-// com/mnvths/schoolclearance/screen/AssignedSectionsScreen.kt
 package com.mnvths.schoolclearance.screen
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.outlined.Class
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.ClassSection
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
+
+// Brand Colors
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+private val BackgroundGray = Color(0xFFF5F5F5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,70 +54,112 @@ fun AssignedSectionsScreen(
         viewModel.fetchSectionsForSubject(signatoryId, subjectId)
     }
 
+    // Grouping Logic
+    val groupedSections = remember(sections) {
+        sections.groupBy { it.gradeLevel }
+            .toSortedMap(compareBy { it.filter { char -> char.isDigit() }.toIntOrNull() ?: 0 })
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(subjectName) },
+            CenterAlignedTopAppBar(
+                title = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(subjectName, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Assigned Classes",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = SchoolBlue,
+                    navigationIconContentColor = SchoolBlue
+                )
             )
         },
-        // ✅ ADD THE FLOATING ACTION BUTTON
+        containerColor = BackgroundGray,
         floatingActionButton = {
-            if (showFab) { // ✅ WRAP THE BUTTON IN THIS IF-STATEMENT
-                FloatingActionButton(
+            if (showFab) {
+                ExtendedFloatingActionButton(
                     onClick = {
                         navController.navigate("assignSectionsToSubject/${signatoryId}/${subjectId}/${subjectName}")
-                    }
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Assign Section")
-                }
+                    },
+                    containerColor = SchoolBlue,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Filled.Add, null) },
+                    text = { Text("Add Class") }
+                )
             }
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
+                .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
         ) {
-            Text("Assigned Sections", style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            when {
-                isLoading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = SchoolBlue)
                 }
-                error != null -> {
+            } else if (error != null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = "Error: $error",
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
+                        color = SchoolRed,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
-                sections.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No sections have been assigned to this subject yet.")
+            } else if (sections.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Outlined.FolderOpen, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No classes assigned yet.", color = Color.Gray)
+                        if (showFab) {
+                            Text("Tap 'Add Class' to assign sections.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                        }
                     }
                 }
-                else -> {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(sections, key = { it.sectionId }) { section ->
-                            // ✅ UPDATE THIS PART
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    groupedSections.forEach { (gradeLevel, classSections) ->
+                        // Grade Header
+                        item {
+                            Text(
+                                text = gradeLevel.uppercase(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                            )
+                        }
+
+                        // Sections
+                        items(classSections, key = { it.sectionId }) { section ->
                             SectionListItem(
                                 section = section,
                                 onClick = {
-                                    // ✅ USE THE NEW PARAMETER HERE
                                     val route = "$destinationRoute/${section.sectionId}/${subjectId}/${section.gradeLevel}/${section.sectionName}/${subjectName}"
                                     navController.navigate(route)
                                 }
                             )
                         }
                     }
+
+                    // Space for FAB
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
         }
@@ -114,20 +169,45 @@ fun AssignedSectionsScreen(
 @Composable
 fun SectionListItem(section: ClassSection, onClick: () -> Unit) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        onClick = onClick // Make the card clickable
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "${section.gradeLevel} - ${section.sectionName}",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
+            // Icon
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(SchoolBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.Class, null, tint = SchoolBlue)
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = section.sectionName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Manage Students",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            Icon(Icons.Filled.ChevronRight, null, tint = Color.Gray)
         }
     }
 }

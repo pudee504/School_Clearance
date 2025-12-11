@@ -4,34 +4,37 @@ import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SupervisorAccount
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.mnvths.schoolclearance.DashboardNavGraph // ✅ CHANGED
+import com.mnvths.schoolclearance.DashboardNavGraph
 import com.mnvths.schoolclearance.R
 import com.mnvths.schoolclearance.data.AppSettings
 import com.mnvths.schoolclearance.data.OtherUser
@@ -39,22 +42,27 @@ import com.mnvths.schoolclearance.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+// Define School Colors locally
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+
 private data class AdminScreen(
     val route: String,
     val title: String,
-    val icon: ImageVector
+    val icon: ImageVector,
+    val unselectedIcon: ImageVector // Added for better UX state
 )
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboard(
-    rootNavController: NavHostController, // ✅ ADDED
+    rootNavController: NavHostController,
     user: OtherUser,
     onSignOut: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    val innerNavController = rememberNavController() // This is ONLY for the bottom tabs
+    val innerNavController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -62,12 +70,13 @@ fun AdminDashboard(
     var showSettingsDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    // improved screen definitions with outlined icons for inactive states
     val screens = listOf(
-        AdminScreen(route = "students_graph", title = "Students", icon = Icons.Filled.People),
-        AdminScreen(route = "sections_graph", title = "Sections", icon = Icons.Filled.Groups),
-        AdminScreen(route = "signatories_graph", title = "Signatories", icon = Icons.Filled.SupervisorAccount),
-        AdminScreen(route = "subjects_graph", title = "Subjects", icon = Icons.Filled.Book),
-        AdminScreen(route = "accounts_graph", title = "Accounts", icon = Icons.Filled.ReceiptLong)
+        AdminScreen("students_graph", "Students", Icons.Filled.People, Icons.Outlined.People),
+        AdminScreen("sections_graph", "Sections", Icons.Filled.Groups, Icons.Outlined.Groups),
+        AdminScreen("signatories_graph", "Signatories", Icons.Filled.SupervisorAccount, Icons.Outlined.SupervisorAccount),
+        AdminScreen("subjects_graph", "Subjects", Icons.Filled.Book, Icons.Outlined.Book),
+        AdminScreen("accounts_graph", "Accounts", Icons.Filled.ReceiptLong, Icons.Outlined.ReceiptLong)
     )
 
     ModalNavigationDrawer(
@@ -92,28 +101,62 @@ fun AdminDashboard(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("Admin Dashboard") },
+                // Modern CenterAlignedTopAppBar with Brand Color
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            "Admin Dashboard",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
-                                contentDescription = "Open Navigation Menu"
+                                contentDescription = "Menu",
+                                tint = Color.White
                             )
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = SchoolBlue
+                    )
                 )
             },
             bottomBar = {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color.White,
+                    tonalElevation = 8.dp
+                ) {
                     val navBackStackEntry by innerNavController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
 
                     screens.forEach { screen ->
+                        val isSelected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                         NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = screen.title) },
-                            label = { Text(screen.title) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            icon = {
+                                Icon(
+                                    imageVector = if (isSelected) screen.icon else screen.unselectedIcon,
+                                    contentDescription = screen.title
+                                )
+                            },
+                            label = {
+                                Text(
+                                    screen.title,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontSize = 10.sp
+                                )
+                            },
+                            selected = isSelected,
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = SchoolBlue,
+                                selectedTextColor = SchoolBlue,
+                                indicatorColor = SchoolBlue.copy(alpha = 0.1f),
+                                unselectedIconColor = Color.Gray,
+                                unselectedTextColor = Color.Gray
+                            ),
                             onClick = {
                                 innerNavController.navigate(screen.route) {
                                     popUpTo(innerNavController.graph.findStartDestination().id) {
@@ -128,8 +171,12 @@ fun AdminDashboard(
                 }
             }
         ) { paddingValues ->
-            Box(modifier = Modifier.padding(paddingValues)) {
-                // ✅ CHANGED: Use the new graph and pass BOTH controllers
+            Box(
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .fillMaxSize()
+                    .background(Color(0xFFF5F5F5)) // Light gray background for content area
+            ) {
                 DashboardNavGraph(
                     innerNavController = innerNavController,
                     rootNavController = rootNavController,
@@ -148,11 +195,9 @@ fun AdminDashboard(
                     newSettings = newSettings,
                     onSuccess = {
                         showSettingsDialog = false
-                        // ✅ 2. Use the 'context' variable that was captured from the outer scope.
                         Toast.makeText(context, "Settings Saved!", Toast.LENGTH_SHORT).show()
                     },
                     onError = { errorMsg ->
-                        // You can also use it here for error messages.
                         Toast.makeText(context, "Error: $errorMsg", Toast.LENGTH_LONG).show()
                     }
                 )
@@ -161,7 +206,6 @@ fun AdminDashboard(
     }
 }
 
-
 @Composable
 fun AdminDrawerContent(
     user: OtherUser,
@@ -169,53 +213,76 @@ fun AdminDrawerContent(
     onSignOutClick: () -> Unit,
     onReportsClick: () -> Unit,
 ) {
-    ModalDrawerSheet {
+    ModalDrawerSheet(
+        drawerContainerColor = Color.White
+    ) {
+        // Custom Header with Brand Color
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .background(SchoolBlue) // Brand Header
+                .padding(vertical = 32.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.malasila),
-                contentDescription = "School Logo",
-                modifier = Modifier
-                    .size(100.dp)
-                    .padding(bottom = 16.dp)
+            Surface(
+                modifier = Modifier.size(90.dp),
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 4.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(id = R.drawable.malasila),
+                        contentDescription = "School Logo",
+                        modifier = Modifier.size(80.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = user.name.uppercase(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             )
             Text(
-                text = "Welcome,",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = user.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                text = "Administrator",
+                style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.8f))
             )
         }
-        Divider()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Navigation Items
         NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Settings, contentDescription = "Set Academic Term") },
-            label = { Text("Set Academic Term") },
+            icon = { Icon(Icons.Default.Settings, null, tint = SchoolBlue) },
+            label = { Text("Academic Settings") }, // Renamed for clarity
             selected = false,
-            onClick = onSettingsClick
+            onClick = onSettingsClick,
+            modifier = Modifier.padding(horizontal = 12.dp)
         )
         NavigationDrawerItem(
-            icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
+            icon = { Icon(Icons.Default.ReceiptLong, null, tint = SchoolBlue) },
             label = { Text("Reports") },
             selected = false,
-            onClick = onReportsClick
+            onClick = onReportsClick,
+            modifier = Modifier.padding(horizontal = 12.dp)
         )
+
+        Spacer(modifier = Modifier.weight(1f)) // Push logout to bottom
+        Divider(modifier = Modifier.padding(horizontal = 16.dp))
+
         NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
-            label = { Text("Logout") },
+            icon = { Icon(Icons.Default.Logout, null, tint = SchoolRed) }, // Red for logout
+            label = { Text("Logout", color = SchoolRed) },
             selected = false,
-            onClick = onSignOutClick
+            onClick = onSignOutClick,
+            modifier = Modifier.padding(12.dp)
         )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,37 +294,72 @@ fun SettingsDialog(
     var schoolYear by remember { mutableStateOf(currentSettings.activeSchoolYear.split("-").first().toIntOrNull() ?: Calendar.getInstance().get(Calendar.YEAR)) }
     var jhsQuarter by remember { mutableStateOf(currentSettings.activeQuarterJhs) }
     var shsSemester by remember { mutableStateOf(currentSettings.activeSemesterShs) }
-    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Active Term") },
+        title = {
+            Text(
+                "Academic Term Settings",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = SchoolBlue
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
+            Column(
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                // School Year Selector (Card Style)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("School Year:", style = MaterialTheme.typography.bodyLarge)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { schoolYear-- }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null) }
-                        Text("$schoolYear-${schoolYear + 1}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        IconButton(onClick = { schoolYear++ }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Active School Year", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            FilledIconButton(
+                                onClick = { schoolYear-- },
+                                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = Color.Black)
+                            }
+
+                            Text(
+                                "$schoolYear - ${schoolYear + 1}",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = SchoolBlue)
+                            )
+
+                            FilledIconButton(
+                                onClick = { schoolYear++ },
+                                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.White)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.Black)
+                            }
+                        }
                     }
                 }
+
                 Divider()
+
+                // Dropdowns
                 var jhsExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(expanded = jhsExpanded, onExpandedChange = { jhsExpanded = it }) {
                     OutlinedTextField(
                         value = "Quarter $jhsQuarter",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("For JHS (G7-10)") },
+                        label = { Text("Junior High (G7-10)") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = jhsExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SchoolBlue,
+                            focusedLabelColor = SchoolBlue
+                        )
                     )
                     ExposedDropdownMenu(expanded = jhsExpanded, onDismissRequest = { jhsExpanded = false }) {
                         (1..4).forEach { q ->
@@ -275,11 +377,13 @@ fun SettingsDialog(
                         value = if (shsSemester == "1") "1st Semester" else "2nd Semester",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("For SHS (G11-12)") },
+                        label = { Text("Senior High (G11-12)") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = shsExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SchoolBlue,
+                            focusedLabelColor = SchoolBlue
+                        )
                     )
                     ExposedDropdownMenu(expanded = shsExpanded, onDismissRequest = { shsExpanded = false }) {
                         DropdownMenuItem(text = { Text("1st Semester") }, onClick = {
@@ -295,23 +399,26 @@ fun SettingsDialog(
             }
         },
         confirmButton = {
-            Button(onClick = {
-                val newSettings = AppSettings(
-                    activeSchoolYear = "$schoolYear-${schoolYear + 1}",
-                    activeQuarterJhs = jhsQuarter,
-                    activeSemesterShs = shsSemester
-                )
-                // The onSave function now contains all the logic for saving,
-                // closing the dialog, and showing the toast.
-                onSave(newSettings)
-                // ❌ REMOVE THE TOAST FROM HERE
-                // Toast.makeText(context, "Settings Saved!", Toast.LENGTH_SHORT).show()
-            }) {
-                Text("Save")
+            Button(
+                onClick = {
+                    val newSettings = AppSettings(
+                        activeSchoolYear = "$schoolYear-${schoolYear + 1}",
+                        activeQuarterJhs = jhsQuarter,
+                        activeSemesterShs = shsSemester
+                    )
+                    onSave(newSettings)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = SchoolBlue)
+            ) {
+                Text("Save Changes")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
+            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)) {
+                Text("Cancel")
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(16.dp)
     )
 }

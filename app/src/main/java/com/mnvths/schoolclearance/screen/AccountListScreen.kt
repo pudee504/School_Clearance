@@ -1,25 +1,42 @@
 // file: screen/AccountListScreen.kt
+package com.mnvths.schoolclearance.screen
 
+import AccountViewModel
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.mnvths.schoolclearance.data.Account
 
+
+// Brand Colors
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+private val BackgroundGray = Color(0xFFF5F5F5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,94 +49,92 @@ fun AccountListScreen(
     val error by viewModel.error
     val context = LocalContext.current
 
-    // ✅ ADDED: State for managing dialogs
+    // Dialog States
     var showAddDialog by remember { mutableStateOf(false) }
     var accountToEdit by remember { mutableStateOf<Account?>(null) }
     var accountToDelete by remember { mutableStateOf<Account?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
 
-    // ✅ ADDED: Scaffold for FAB and TopAppBar
+    // Initial Fetch
+    LaunchedEffect(Unit) {
+        viewModel.fetchAccounts()
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Manage Accounts") })
+            CenterAlignedTopAppBar(
+                title = { Text("Manage Accounts", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = SchoolBlue
+                )
+            )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Account")
-            }
-        }
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = SchoolBlue,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Filled.Add, null) },
+                text = { Text("Add Account") }
+            )
+        },
+        containerColor = BackgroundGray
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = SchoolBlue)
             } else if (error != null) {
-                Text(
-                    text = "Error: $error",
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Error loading accounts",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SchoolRed
+                    )
+                    Text(
+                        text = error ?: "Unknown Error",
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else if (accounts.isEmpty()) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Outlined.AccountBalance, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("No accounts created yet.", color = Color.Gray)
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp) // Space for FAB
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp) // Space for FAB
                 ) {
                     items(accounts, key = { it.id }) { account ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = account.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                // ✅ ADDED: Edit/Delete options menu
-                                var menuExpanded by remember { mutableStateOf(false) }
-                                Box {
-                                    IconButton(onClick = { menuExpanded = true }) {
-                                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                                    }
-                                    DropdownMenu(
-                                        expanded = menuExpanded,
-                                        onDismissRequest = { menuExpanded = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Edit") },
-                                            onClick = {
-                                                accountToEdit = account
-                                                menuExpanded = false
-                                            },
-                                            leadingIcon = { Icon(Icons.Default.Edit, null) }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("Delete") },
-                                            onClick = {
-                                                accountToDelete = account
-                                                menuExpanded = false
-                                            },
-                                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        AccountItemCard(
+                            account = account,
+                            onEdit = { accountToEdit = account },
+                            onDelete = { accountToDelete = account }
+                        )
                     }
                 }
             }
         }
     }
 
-    // ✅ ADDED: Dialog for adding a new account
+    // --- Dialogs ---
+
     if (showAddDialog) {
         var newAccountName by remember { mutableStateOf("") }
         AlertDialog(
@@ -131,7 +146,8 @@ fun AccountListScreen(
                     onValueChange = { newAccountName = it },
                     label = { Text("Account Name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = KeyboardCapitalization.Words)
                 )
             },
             confirmButton = {
@@ -139,7 +155,7 @@ fun AccountListScreen(
                     onClick = {
                         isSubmitting = true
                         viewModel.addAccount(
-                            name = newAccountName,
+                            name = newAccountName.trim(),
                             onSuccess = {
                                 Toast.makeText(context, "Account added!", Toast.LENGTH_SHORT).show()
                                 isSubmitting = false
@@ -151,20 +167,21 @@ fun AccountListScreen(
                             }
                         )
                     },
-                    enabled = !isSubmitting && newAccountName.isNotBlank()
+                    enabled = !isSubmitting && newAccountName.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = SchoolBlue)
                 ) {
-                    if (isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Add")
+                    if (isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White) else Text("Add")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { if (!isSubmitting) showAddDialog = false }) {
                     Text("Cancel")
                 }
-            }
+            },
+            containerColor = Color.White
         )
     }
 
-    // ✅ ADDED: Dialog for editing an existing account
     accountToEdit?.let { account ->
         var updatedName by remember { mutableStateOf(account.name) }
         AlertDialog(
@@ -176,7 +193,8 @@ fun AccountListScreen(
                     onValueChange = { updatedName = it },
                     label = { Text("Account Name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(capitalization = KeyboardCapitalization.Words)
                 )
             },
             confirmButton = {
@@ -185,7 +203,7 @@ fun AccountListScreen(
                         isSubmitting = true
                         viewModel.updateAccount(
                             id = account.id,
-                            newName = updatedName,
+                            newName = updatedName.trim(),
                             onSuccess = {
                                 Toast.makeText(context, "Account updated!", Toast.LENGTH_SHORT).show()
                                 isSubmitting = false
@@ -197,25 +215,27 @@ fun AccountListScreen(
                             }
                         )
                     },
-                    enabled = !isSubmitting && updatedName.isNotBlank() && updatedName != account.name
+                    enabled = !isSubmitting && updatedName.isNotBlank() && updatedName != account.name,
+                    colors = ButtonDefaults.buttonColors(containerColor = SchoolBlue)
                 ) {
-                    if (isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Save")
+                    if (isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White) else Text("Save")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { if (!isSubmitting) accountToEdit = null }) {
                     Text("Cancel")
                 }
-            }
+            },
+            containerColor = Color.White
         )
     }
 
-    // ✅ ADDED: Dialog for confirming deletion
     accountToDelete?.let { account ->
         AlertDialog(
             onDismissRequest = { if (!isSubmitting) accountToDelete = null },
-            title = { Text("Confirm Deletion") },
-            text = { Text("Are you sure you want to delete the account '${account.name}'?") },
+            icon = { Icon(Icons.Outlined.Delete, null, tint = SchoolRed) },
+            title = { Text("Delete Account?") },
+            text = { Text("Are you sure you want to delete '${account.name}'? This may affect student clearances linked to this account.") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -234,16 +254,88 @@ fun AccountListScreen(
                         )
                     },
                     enabled = !isSubmitting,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = SchoolRed)
                 ) {
-                    if (isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Delete")
+                    if (isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White) else Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { if (!isSubmitting) accountToDelete = null }) {
                     Text("Cancel")
                 }
-            }
+            },
+            containerColor = Color.White
         )
+    }
+}
+
+// Helper Component
+@Composable
+fun AccountItemCard(
+    account: Account,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(SchoolBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.AccountBalance, null, tint = SchoolBlue)
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = account.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Options", tint = Color.Gray)
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    modifier = Modifier.background(Color.White)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = {
+                            onEdit()
+                            menuExpanded = false
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.Edit, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = SchoolRed) },
+                        onClick = {
+                            onDelete()
+                            menuExpanded = false
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = SchoolRed) }
+                    )
+                }
+            }
+        }
     }
 }

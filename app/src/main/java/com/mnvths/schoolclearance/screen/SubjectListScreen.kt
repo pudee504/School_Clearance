@@ -1,29 +1,46 @@
 package com.mnvths.schoolclearance.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack // ✅ Fixed import
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.Class
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import com.mnvths.schoolclearance.viewmodel.SubjectViewModel
 
-// This screen remains the same.
+// Brand Colors
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+private val BackgroundGray = Color(0xFFF5F5F5)
+
+// --- Screen 1: Grade Level Selection ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurriculumHomeScreen(
@@ -40,8 +57,15 @@ fun CurriculumHomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Curriculum Management") })
-        }
+            CenterAlignedTopAppBar(
+                title = { Text("Curriculum", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = SchoolBlue
+                )
+            )
+        },
+        containerColor = BackgroundGray
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -49,33 +73,31 @@ fun CurriculumHomeScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
+            Text(
+                "Select Grade Level",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.Gray,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
+            )
+
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = SchoolBlue)
                 }
             } else if (error != null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Error: $error", color = MaterialTheme.colorScheme.error)
+                    Text(text = "Error: $error", color = SchoolRed)
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(gradeLevels, key = { it.id }) { gradeLevel ->
-                        ElevatedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    navController.navigate("curriculumManagement/${gradeLevel.id}/${gradeLevel.name}")
-                                }
-                        ) {
-                            Text(
-                                text = gradeLevel.name,
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        GradeLevelCard(
+                            name = gradeLevel.name,
+                            onClick = {
+                                navController.navigate("curriculumManagement/${gradeLevel.id}/${gradeLevel.name}")
+                            }
+                        )
                     }
                 }
             }
@@ -83,7 +105,46 @@ fun CurriculumHomeScreen(
     }
 }
 
-// ✅ MODIFIED: This screen now includes the semester switcher.
+@Composable
+fun GradeLevelCard(name: String, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(SchoolBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Outlined.School, null, tint = SchoolBlue)
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+
+            Icon(Icons.Filled.ChevronRight, null, tint = Color.Gray)
+        }
+    }
+}
+
+// --- Screen 2: Subject Management ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurriculumManagementScreen(
@@ -100,10 +161,7 @@ fun CurriculumManagementScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showRemoveDialog by remember { mutableStateOf<Int?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
-
     var selectedSemester by remember { mutableStateOf(1) }
-
-    // ✅ NEW: State to track which subject's menu is expanded
     var expandedMenuRequirementId by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(gradeLevelId, selectedSemester) {
@@ -113,115 +171,158 @@ fun CurriculumManagementScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(gradeLevelName) },
+            CenterAlignedTopAppBar(
+                title = { Text(gradeLevelName, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
+                        // ✅ FIX: Use Default instead of Automirrored
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = SchoolBlue,
+                    navigationIconContentColor = SchoolBlue
+                )
             )
         },
+        containerColor = BackgroundGray,
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Subject")
-            }
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = SchoolBlue,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Filled.Add, null) },
+                text = { Text("Add Subject") }
+            )
         }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+
+            // Semester Tabs (Only for Senior High / Grade 11-12 logic)
             if (gradeLevelId > 4) {
-                val semesters = listOf("Semester 1", "Semester 2")
-                TabRow(selectedTabIndex = selectedSemester - 1) {
-                    semesters.forEachIndexed { index, title ->
+                TabRow(
+                    selectedTabIndex = selectedSemester - 1,
+                    containerColor = Color.White,
+                    contentColor = SchoolBlue,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[selectedSemester - 1]),
+                            color = SchoolBlue
+                        )
+                    }
+                ) {
+                    listOf("1st Semester", "2nd Semester").forEachIndexed { index, title ->
                         Tab(
                             selected = (selectedSemester - 1) == index,
                             onClick = { selectedSemester = index + 1 },
-                            text = { Text(title) }
+                            text = { Text(title, fontWeight = if((selectedSemester - 1) == index) FontWeight.Bold else FontWeight.Normal) },
+                            selectedContentColor = SchoolBlue,
+                            unselectedContentColor = Color.Gray
                         )
                     }
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = SchoolBlue)
                 } else if (error != null) {
-                    Text("Error: $error", modifier = Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.error)
+                    Text("Error: $error", modifier = Modifier.align(Alignment.Center), color = SchoolRed)
                 } else if (subjects.isEmpty()) {
-                    Text("No active subjects found for this semester.", modifier = Modifier.align(Alignment.Center))
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Outlined.Book, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No subjects found.", color = Color.Gray)
+                    }
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+                        contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // ✅ --- MODIFICATION START ---
-                        items(subjects, key = { it.requirementId }) { subject ->
-                            // Define the list of special, non-removable subject IDs
-                            val nonRemovableSubjectIds = listOf(87, 88, 89) // Library, Adviser, Principal
+                        item {
+                            Text(
+                                "Active Subjects",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                            )
+                        }
 
-                            Card(modifier = Modifier.fillMaxWidth()) {
+                        items(subjects, key = { it.requirementId }) { subject ->
+                            val nonRemovableSubjectIds = listOf(87, 88, 89)
+                            val isLocked = subject.subjectId in nonRemovableSubjectIds
+
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
                                 Row(
-                                    modifier = Modifier
-                                        .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                                    modifier = Modifier.padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = subject.subjectName,
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.bodyLarge
+                                    Icon(
+                                        imageVector = if(isLocked) Icons.Outlined.Lock else Icons.Outlined.Class,
+                                        contentDescription = null,
+                                        tint = if(isLocked) Color.Gray else SchoolBlue
                                     )
+                                    Spacer(modifier = Modifier.width(16.dp))
 
-                                    // Conditionally show the options menu if the subject is not in the non-removable list
-                                    if (subject.subjectId !in nonRemovableSubjectIds) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = subject.subjectName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        if (isLocked) {
+                                            Text(
+                                                text = "Mandatory Requirement",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.Gray
+                                            )
+                                        }
+                                    }
+
+                                    if (!isLocked) {
                                         Box {
-                                            // This is the '...' button
-                                            IconButton(onClick = {
-                                                expandedMenuRequirementId = subject.requirementId
-                                            }) {
-                                                Icon(
-                                                    Icons.Default.MoreVert,
-                                                    contentDescription = "More options for ${subject.subjectName}"
-                                                )
+                                            IconButton(onClick = { expandedMenuRequirementId = subject.requirementId }) {
+                                                Icon(Icons.Default.MoreVert, "Options", tint = Color.Gray)
                                             }
-                                            // This is the dropdown menu that appears
                                             DropdownMenu(
                                                 expanded = expandedMenuRequirementId == subject.requirementId,
-                                                onDismissRequest = { expandedMenuRequirementId = null }
+                                                onDismissRequest = { expandedMenuRequirementId = null },
+                                                modifier = Modifier.background(Color.White)
                                             ) {
                                                 DropdownMenuItem(
-                                                    text = { Text("Remove") },
+                                                    text = { Text("Remove", color = SchoolRed) },
                                                     onClick = {
                                                         showRemoveDialog = subject.requirementId
-                                                        expandedMenuRequirementId = null // Close the menu after clicking
+                                                        expandedMenuRequirementId = null
                                                     },
-                                                    leadingIcon = {
-                                                        Icon(
-                                                            Icons.Default.Delete,
-                                                            contentDescription = "Remove",
-                                                            tint = MaterialTheme.colorScheme.error
-                                                        )
-                                                    }
+                                                    leadingIcon = { Icon(Icons.Default.Delete, null, tint = SchoolRed) }
                                                 )
                                             }
                                         }
+                                    } else {
+                                        // Visual indicator that it's locked
+                                        Icon(Icons.Outlined.Lock, "Locked", tint = Color.LightGray.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
                                     }
-                                    // If subjectId is one of the special ones, nothing is rendered here.
                                 }
                             }
                         }
-                        // ✅ --- MODIFICATION END ---
+
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
         }
     }
 
-    // --- Dialogs (Now pass the current semester to the viewmodel actions) ---
     // --- Dialogs ---
     if (showAddDialog) {
         var newSubjectName by remember { mutableStateOf("") }
@@ -229,38 +330,39 @@ fun CurriculumManagementScreen(
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Add Subject to $gradeLevelName") },
+            title = { Text("Add Subject") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Add a new subject to $gradeLevelName.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+
                     OutlinedTextField(
                         value = newSubjectName,
                         onValueChange = { newSubjectName = it },
                         label = { Text("Subject Name") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
                     )
                     OutlinedTextField(
                         value = newSubjectCode,
                         onValueChange = { newSubjectCode = it },
-                        // ✅ CHANGED: Label no longer says "(Optional)"
                         label = { Text("Subject Code") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters)
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        // ✅ CHANGED: Guard clause now checks both fields
                         if (newSubjectName.isNotBlank() && newSubjectCode.isNotBlank()) {
                             isSubmitting = true
                             viewModel.addSubjectToCurriculum(
-                                name = newSubjectName,
+                                name = newSubjectName.trim(),
                                 gradeLevelId = gradeLevelId,
                                 semester = selectedSemester,
-                                // ✅ CHANGED: Pass the code directly, it's guaranteed not to be blank
-                                subjectCode = newSubjectCode,
+                                subjectCode = newSubjectCode.trim(),
                                 onSuccess = {
                                     Toast.makeText(context, "Subject added!", Toast.LENGTH_SHORT).show()
                                     isSubmitting = false
@@ -273,21 +375,23 @@ fun CurriculumManagementScreen(
                             )
                         }
                     },
-                    // ✅ CHANGED: Button is only enabled when BOTH fields are filled
-                    enabled = !isSubmitting && newSubjectName.isNotBlank() && newSubjectCode.isNotBlank()
+                    enabled = !isSubmitting && newSubjectName.isNotBlank() && newSubjectCode.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = SchoolBlue)
                 ) {
-                    if(isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Add")
+                    if(isSubmitting) CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White) else Text("Add")
                 }
             },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("Cancel") } },
+            containerColor = Color.White
         )
     }
 
     if (showRemoveDialog != null) {
         AlertDialog(
             onDismissRequest = { showRemoveDialog = null },
-            title = { Text("Confirm Removal") },
-            text = { Text("This will make the subject inactive for this grade level. Are you sure?") },
+            icon = { Icon(Icons.Default.Delete, null, tint = SchoolRed) },
+            title = { Text("Remove Subject?") },
+            text = { Text("This will remove the subject from this curriculum level. Existing grades/clearances for students might be affected.", textAlign = TextAlign.Center) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -298,7 +402,7 @@ fun CurriculumManagementScreen(
                             gradeLevelId = gradeLevelId,
                             semester = selectedSemester,
                             onSuccess = {
-                                Toast.makeText(context, "Subject removed from curriculum.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Subject removed.", Toast.LENGTH_SHORT).show()
                                 isSubmitting = false
                                 showRemoveDialog = null
                             },
@@ -309,12 +413,13 @@ fun CurriculumManagementScreen(
                         )
                     },
                     enabled = !isSubmitting,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    colors = ButtonDefaults.buttonColors(containerColor = SchoolRed)
                 ) {
-                    if(isSubmitting) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Remove")
+                    if(isSubmitting) CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White) else Text("Remove")
                 }
             },
-            dismissButton = { TextButton(onClick = { showRemoveDialog = null }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showRemoveDialog = null }) { Text("Cancel") } },
+            containerColor = Color.White
         )
     }
 }

@@ -4,28 +4,35 @@ import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Book
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -38,6 +45,11 @@ import com.mnvths.schoolclearance.data.OtherUser
 import com.mnvths.schoolclearance.viewmodel.AuthViewModel
 import com.mnvths.schoolclearance.viewmodel.SignatoryViewModel
 import kotlinx.coroutines.launch
+
+// Brand Colors
+private val SchoolBlue = Color(0xFF0038A8)
+private val SchoolRed = Color(0xFFC62828)
+private val BackgroundGray = Color(0xFFF5F5F5)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +70,6 @@ fun SignatoryDashboard(
         ChangePasswordDialog(
             onDismiss = { showPasswordDialog = false },
             onConfirm = { oldPassword, newPassword ->
-                // ✅ CALL THE FUNCTION FROM AUTHVIEWMODEL
                 authViewModel.changePassword(
                     userId = user.id,
                     oldPassword = oldPassword,
@@ -97,8 +108,8 @@ fun SignatoryDashboard(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("Signatory Dashboard") },
+                CenterAlignedTopAppBar(
+                    title = { Text("Workspace", fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
@@ -106,9 +117,15 @@ fun SignatoryDashboard(
                                 contentDescription = "Open Navigation Menu"
                             )
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = SchoolBlue,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
                 )
-            }
+            },
+            containerColor = BackgroundGray
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
                 SignatoryNavHost(
@@ -241,68 +258,108 @@ private fun AssignmentsOverviewScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text(user.name, style = MaterialTheme.typography.headlineMedium)
-        Text(
-            text = "Username: ${user.username ?: "N/A"}",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // --- Welcome Card ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(SchoolBlue.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.malasila),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Welcome Back,",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = user.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = SchoolBlue
+                    )
+                }
+            }
+        }
 
-        Divider(modifier = Modifier.padding(vertical = 16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = SchoolBlue)
             }
         } else if (error != null) {
-            Text(
-                text = "Error: $error",
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "Error: $error",
+                    color = SchoolRed,
+                    textAlign = TextAlign.Center
+                )
+            }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    Text(
-                        text = "Assigned Subjects",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                if (assignedSubjects.isEmpty()) {
-                    item { Text("No subjects assigned.", modifier = Modifier.padding(bottom = 16.dp)) }
-                } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // --- Subjects ---
+                if (assignedSubjects.isNotEmpty()) {
+                    item { DashboardSectionHeader("Academic Duties") }
                     items(assignedSubjects) { subject ->
-                        AssignmentListItem(
+                        DashboardDutyCard(
                             name = subject.subjectName,
-                            onItemClicked = {
+                            type = "Subject",
+                            icon = Icons.Outlined.Book,
+                            onClick = {
                                 navController.navigate("assigned_sections_subject/${subject.subjectId}/${subject.subjectName}")
                             }
                         )
                     }
                 }
 
-                item { Divider(modifier = Modifier.padding(vertical = 16.dp)) }
-
-                item {
-                    Text(
-                        text = "Assigned Accounts",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                if (assignedAccounts.isEmpty()) {
-                    item { Text("No accounts assigned.") }
-                } else {
+                // --- Accounts ---
+                if (assignedAccounts.isNotEmpty()) {
+                    item { DashboardSectionHeader("Financial/Admin Duties") }
                     items(assignedAccounts) { account ->
-                        AssignmentListItem(
+                        DashboardDutyCard(
                             name = account.accountName,
-                            onItemClicked = {
+                            type = "Account",
+                            icon = Icons.Outlined.AccountBalance,
+                            onClick = {
                                 navController.navigate("assigned_sections_account/${account.accountId}/${account.accountName}")
                             }
                         )
+                    }
+                }
+
+                // Empty State
+                if (assignedSubjects.isEmpty() && assignedAccounts.isEmpty()) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Outlined.FolderOpen, null, tint = Color.LightGray, modifier = Modifier.size(64.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("No duties assigned yet.", color = Color.Gray)
+                            Text("Contact the administrator.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                        }
                     }
                 }
             }
@@ -310,17 +367,65 @@ private fun AssignmentsOverviewScreen(
     }
 }
 
+// --- Dashboard Components ---
+
 @Composable
-private fun AssignmentListItem(
+private fun DashboardSectionHeader(title: String) {
+    Text(
+        text = title.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = Color.Gray,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun DashboardDutyCard(
     name: String,
-    onItemClicked: () -> Unit
+    type: String,
+    icon: ImageVector,
+    onClick: () -> Unit
 ) {
     Card(
-        onClick = onItemClicked,
-        modifier = Modifier.fillMaxWidth()
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(SchoolBlue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = SchoolBlue)
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Manage $type Clearance",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+
+            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
         }
     }
 }
@@ -332,46 +437,70 @@ private fun SignatoryDrawerContent(
     onSignOutClick: () -> Unit,
     onReportsClick: () -> Unit,
 ) {
-    ModalDrawerSheet {
+    ModalDrawerSheet(drawerContainerColor = Color.White) {
+        // Custom Brand Header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .background(SchoolBlue)
+                .padding(vertical = 32.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.malasila),
-                contentDescription = "School Logo",
-                modifier = Modifier
-                    .size(100.dp)
-                    .padding(bottom = 16.dp)
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                modifier = Modifier.size(80.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(id = R.drawable.malasila),
+                        contentDescription = "School Logo",
+                        modifier = Modifier.size(60.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Welcome,",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White
             )
-            Text(text = "Welcome,", style = MaterialTheme.typography.titleMedium)
             Text(
                 text = user.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                color = Color.White,
+                textAlign = TextAlign.Center
             )
         }
-        Divider()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Key, contentDescription = "Change Password") },
+            icon = { Icon(Icons.Default.Key, null, tint = SchoolBlue) },
             label = { Text("Change Password") },
             selected = false,
-            onClick = onChangePasswordClick
+            onClick = onChangePasswordClick,
+            modifier = Modifier.padding(horizontal = 12.dp)
         )
         NavigationDrawerItem(
-            icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
-            label = { Text("Reports") },
+            icon = { Icon(Icons.Default.ReceiptLong, null, tint = SchoolBlue) },
+            label = { Text("View Reports") },
             selected = false,
-            onClick = onReportsClick
+            onClick = onReportsClick,
+            modifier = Modifier.padding(horizontal = 12.dp)
         )
+
+        Spacer(modifier = Modifier.weight(1f))
+        Divider(modifier = Modifier.padding(horizontal = 16.dp))
+
         NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
-            label = { Text("Logout") },
+            icon = { Icon(Icons.Default.Logout, null, tint = SchoolRed) },
+            label = { Text("Logout", color = SchoolRed) },
             selected = false,
-            onClick = onSignOutClick
+            onClick = onSignOutClick,
+            modifier = Modifier.padding(12.dp)
         )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
