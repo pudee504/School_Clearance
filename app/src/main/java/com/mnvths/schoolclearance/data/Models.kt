@@ -346,3 +346,26 @@ data class LogoutRequest(
     val userId: Int?,
     val username: String?
 )
+
+@Serializable
+data class FCMTokenRequest(
+    val userId: Int,
+    val fcmToken: String
+)
+
+@Serializable
+data class FullyClearedStudent(
+    val userId: Int,         // Added to SQL query
+    val studentId: String,   // Aliased in SQL
+    val firstName: String,   // Aliased in SQL
+    val middleName: String?, // Aliased in SQL
+    val lastName: String,    // Aliased in SQL
+    val gradeLevel: String,  // Aliased in SQL
+    val sectionName: String  // Aliased in SQL (was returning 'section' before)
+)
+
+@Serializable
+data class ReportsResponse(
+    val totalCount: Int,     // Now provided by backend
+    val students: List<FullyClearedStudent> // Now provided by backend
+)

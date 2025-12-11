@@ -93,7 +93,7 @@ fun AssignedSectionsForAccountScreen(
                                 section = section,
                                 onClick = {
                                     // ✅ USE THE NEW PARAMETER HERE
-                                    val route = "$destinationRoute/${section.sectionId}/${accountId}/${section.sectionName}/${accountName}/${section.gradeLevel}"
+                                    val route = "clearanceScreenAccount/${section.sectionId}/${accountId}/${section.sectionName}/${accountName}/${section.gradeLevel}"
                                     navController.navigate(route)
                                 }
                             )

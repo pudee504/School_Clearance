@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -85,6 +87,10 @@ fun SignatoryDashboard(
                 onSignOutClick = {
                     scope.launch { drawerState.close() }
                     onSignOut()
+                },
+                onReportsClick = {
+                    scope.launch { drawerState.close() }
+                    innerNavController.navigate("reports")
                 }
             )
         }
@@ -207,6 +213,9 @@ private fun SignatoryNavHost(
                 showFab = false
             )
         }
+        composable("reports") {
+            ReportsScreen(navController = innerNavController)
+        }
     }
 }
 
@@ -321,6 +330,7 @@ private fun SignatoryDrawerContent(
     user: OtherUser,
     onChangePasswordClick: () -> Unit,
     onSignOutClick: () -> Unit,
+    onReportsClick: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(
@@ -350,6 +360,12 @@ private fun SignatoryDrawerContent(
             label = { Text("Change Password") },
             selected = false,
             onClick = onChangePasswordClick
+        )
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.ReceiptLong, contentDescription = "Reports") },
+            label = { Text("Reports") },
+            selected = false,
+            onClick = onReportsClick
         )
         NavigationDrawerItem(
             icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },

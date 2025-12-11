@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.mnvths.schoolclearance" />
+                  <option name="mobileSdkAppId" value="1:758096848458:android:da899a84ded9eb38fae8b3" />
+                  <option name="projectId" value="malasila-clearance-app" />
+                  <option name="projectNumber" value="758096848458" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
